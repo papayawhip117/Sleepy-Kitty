@@ -1,4 +1,4 @@
-import { W, H, SPOTS, HIT, drawScene, buildRoom } from './scene.js';
+import { W, H, SPOTS, hitSpot, drawScene, buildRoom } from './scene.js';
 import { lookAt, realHour, realSeason, PRESET_HOURS } from './time.js';
 import { cat, moveTo, update as updateCat, drawCat } from './cat.js';
 
@@ -46,9 +46,8 @@ addEventListener('mousemove', wake);
 // ── click a spot to send the kitty there ──
 canvas.addEventListener('click', (e) => {
   const b = canvas.getBoundingClientRect();
-  const x = ((e.clientX - b.left) / b.width) * W, y = ((e.clientY - b.top) / b.height) * H;
-  for (const [name, [hx, hy, hw, hh]] of Object.entries(HIT))
-    if (x >= hx && x <= hx + hw && y >= hy && y <= hy + hh) { moveTo(name); return; }
+  const name = hitSpot(((e.clientX - b.left) / b.width) * W, ((e.clientY - b.top) / b.height) * H);
+  if (name) moveTo(name);
 });
 
 // ── main loop ──
@@ -66,7 +65,7 @@ function frame(now) {
   drawScene(ctx, lookAt(state.shown), state.shown, season, t, (c, r) => drawCat(c, r, t));
   if (showSpots) for (const s of Object.values(SPOTS)) { // faint markers for the four sleep spots
     ctx.fillStyle = 'rgba(248,204,170,0.7)';
-    ctx.fillRect(s.x - 1, s.y - 34 - Math.round(Math.sin(t * 2) * 1), 3, 3);
+    ctx.fillRect(s.x - 1, s.y - 30 * s.k - Math.round(Math.sin(t * 2) * 1), 3, 3);
   }
   requestAnimationFrame(frame);
 }
