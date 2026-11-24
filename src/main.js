@@ -1,10 +1,11 @@
-import { W, H, SPOTS, drawScene } from './scene.js';
+import { W, H, SPOTS, HIT, drawScene, buildRoom } from './scene.js';
 import { lookAt, realHour, realSeason, PRESET_HOURS } from './time.js';
 import { cat, moveTo, update as updateCat, drawCat } from './cat.js';
 
 const canvas = document.getElementById('room');
 const ctx = canvas.getContext('2d');
 canvas.width = W; canvas.height = H;
+buildRoom();
 
 // Fit the room into the window with whole-number pixel scaling so pixels stay crisp.
 function fit() {
@@ -43,7 +44,6 @@ function wake() {
 addEventListener('mousemove', wake);
 
 // ── click a spot to send the kitty there ──
-const HIT = { bed: [20, 84, 100, 30], sill: [140, 80, 90, 20], desk: [246, 96, 68, 22], rug: [122, 146, 108, 22] };
 canvas.addEventListener('click', (e) => {
   const b = canvas.getBoundingClientRect();
   const x = ((e.clientX - b.left) / b.width) * W, y = ((e.clientY - b.top) / b.height) * H;
@@ -66,7 +66,7 @@ function frame(now) {
   drawScene(ctx, lookAt(state.shown), state.shown, season, t, (c, r) => drawCat(c, r, t));
   if (showSpots) for (const s of Object.values(SPOTS)) { // faint markers for the four sleep spots
     ctx.fillStyle = 'rgba(248,204,170,0.7)';
-    ctx.fillRect(s.x - 1, s.y - 22 - Math.round(Math.sin(t * 2) * 1), 3, 3);
+    ctx.fillRect(s.x - 1, s.y - 34 - Math.round(Math.sin(t * 2) * 1), 3, 3);
   }
   requestAnimationFrame(frame);
 }
