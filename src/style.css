@@ -1,0 +1,22 @@
+:root { --bg: #302e3b; --ink: #f8ccaa; --panel: rgba(48, 46, 59, 0.82); --accent: #cd9fa0; }
+* { box-sizing: border-box; }
+html, body { margin: 0; height: 100%; overflow: hidden; background: var(--bg); }
+body { display: grid; place-items: center; font-family: ui-monospace, 'SF Mono', Menlo, monospace; }
+canvas { image-rendering: pixelated; image-rendering: crisp-edges; display: block; }
+
+.panel {
+  position: fixed; top: 12px; left: 12px; padding: 10px 12px; border-radius: 8px;
+  background: var(--panel); color: var(--ink); font-size: 12px;
+  opacity: 0; pointer-events: none; transition: opacity 0.6s ease;
+}
+.panel.show { opacity: 1; pointer-events: auto; }
+.row { display: flex; align-items: center; gap: 8px; margin-bottom: 6px; }
+.label { width: 52px; opacity: 0.7; }
+.btns { display: flex; gap: 4px; flex-wrap: wrap; }
+.btns button {
+  font: inherit; color: var(--ink); background: transparent; cursor: pointer;
+  border: 1px solid rgba(248, 204, 170, 0.35); border-radius: 5px; padding: 3px 7px;
+}
+.btns button:hover { border-color: var(--ink); }
+.btns button.on { background: var(--accent); color: var(--bg); border-color: var(--accent); }
+.hint { opacity: 0.55; font-size: 11px; margin-top: 2px; }
