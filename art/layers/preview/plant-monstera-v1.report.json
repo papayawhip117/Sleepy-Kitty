@@ -1,0 +1,48 @@
+{
+  "piece": "plant-monstera-v1",
+  "size": [
+    79,
+    124
+  ],
+  "source_px_per_pixel": 6.96,
+  "colours_used": 49,
+  "top_colours": [
+    [
+      "h020",
+      1648
+    ],
+    [
+      "h013",
+      968
+    ],
+    [
+      "h011",
+      740
+    ],
+    [
+      "h016",
+      486
+    ],
+    [
+      "h010",
+      426
+    ],
+    [
+      "h021",
+      214
+    ],
+    [
+      "h0021",
+      203
+    ],
+    [
+      "h0023",
+      166
+    ]
+  ],
+  "off_palette_share": 0.006,
+  "dither_share_before_cleanup": 0.011,
+  "lone_pixels_fixed": 43,
+  "transparent_share": 0.385,
+  "warnings": []
+}

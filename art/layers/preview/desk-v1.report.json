@@ -5,11 +5,11 @@
     157
   ],
   "source_px_per_pixel": 5.99,
-  "colours_used": 57,
+  "colours_used": 62,
   "top_colours": [
     [
       "h1115",
-      1798
+      1710
     ],
     [
       "h0021",
@@ -21,28 +21,28 @@
     ],
     [
       "h0020",
-      697
+      705
     ],
     [
       "h0016",
-      692
+      694
     ],
     [
       "h0018",
-      609
-    ],
-    [
-      "h013",
-      555
+      614
     ],
     [
       "h0022",
-      419
+      420
+    ],
+    [
+      "h005",
+      409
     ]
   ],
-  "off_palette_share": 0.03,
+  "off_palette_share": 0.019,
   "dither_share_before_cleanup": 0.003,
-  "lone_pixels_fixed": 38,
-  "transparent_share": 0.32,
+  "lone_pixels_fixed": 32,
+  "transparent_share": 0.315,
   "warnings": []
 }

@@ -5,7 +5,7 @@
     107
   ],
   "source_px_per_pixel": 9.6,
-  "colours_used": 48,
+  "colours_used": 51,
   "top_colours": [
     [
       "h0022",
@@ -24,7 +24,7 @@
       789
     ],
     [
-      "h019",
+      "h0110",
       657
     ],
     [
@@ -36,13 +36,13 @@
       517
     ],
     [
-      "h017",
+      "h018",
       464
     ]
   ],
-  "off_palette_share": 0.002,
+  "off_palette_share": 0.001,
   "dither_share_before_cleanup": 0.005,
-  "lone_pixels_fixed": 43,
+  "lone_pixels_fixed": 41,
   "transparent_share": 0.434,
   "warnings": []
 }
