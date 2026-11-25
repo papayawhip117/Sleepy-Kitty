@@ -1,0 +1,48 @@
+{
+  "piece": "shell-flat-v1",
+  "size": [
+    480,
+    270
+  ],
+  "source_px_per_pixel": 3.48,
+  "colours_used": 65,
+  "top_colours": [
+    [
+      "key",
+      30552
+    ],
+    [
+      "h0044",
+      8542
+    ],
+    [
+      "h0039",
+      7866
+    ],
+    [
+      "h0017",
+      6769
+    ],
+    [
+      "h0016",
+      5116
+    ],
+    [
+      "h1121",
+      4745
+    ],
+    [
+      "h0013",
+      4486
+    ],
+    [
+      "h1122",
+      4262
+    ]
+  ],
+  "off_palette_share": 0.001,
+  "dither_share_before_cleanup": 0.01,
+  "lone_pixels_fixed": 1392,
+  "transparent_share": 0.0,
+  "warnings": []
+}

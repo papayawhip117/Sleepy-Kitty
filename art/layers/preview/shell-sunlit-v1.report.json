@@ -1,0 +1,48 @@
+{
+  "piece": "shell-sunlit-v1",
+  "size": [
+    480,
+    270
+  ],
+  "source_px_per_pixel": 3.48,
+  "colours_used": 44,
+  "top_colours": [
+    [
+      "key",
+      30560
+    ],
+    [
+      "h0018",
+      23424
+    ],
+    [
+      "h0020",
+      19758
+    ],
+    [
+      "h006",
+      5037
+    ],
+    [
+      "h0010",
+      4887
+    ],
+    [
+      "h0014",
+      4501
+    ],
+    [
+      "h0023",
+      4306
+    ],
+    [
+      "h009",
+      4143
+    ]
+  ],
+  "off_palette_share": 0.006,
+  "dither_share_before_cleanup": 0.002,
+  "lone_pixels_fixed": 288,
+  "transparent_share": 0.0,
+  "warnings": []
+}

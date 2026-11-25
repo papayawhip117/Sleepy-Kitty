@@ -29,6 +29,23 @@ function skyAt(h) {
 const params = new URLSearchParams(location.search);
 const hourNow = () => params.has('hour') ? +params.get('hour') : new Date().getHours() + new Date().getMinutes() / 60;
 
+function drawAmbient() {
+  // Neutral room art + code lighting. Day: soft warm light spilling from the window. Night/dusk: tint the whole room.
+  const h = hourNow();
+  const dayness = Math.max(0, Math.min(1, 1 - Math.abs(h - 13) / 5.5));   // 1 at midday, 0 by early morning/evening
+  if (dayness > 0) {
+    const cx = (wx0 + wx1) / 2, g = b.createRadialGradient(cx, wy1, 10, cx, wy1 + 30, 230);
+    g.addColorStop(0, `rgba(255,230,170,${0.30 * dayness})`); g.addColorStop(1, 'rgba(255,230,170,0)');
+    b.save(); b.globalCompositeOperation = 'screen'; b.fillStyle = g; b.fillRect(0, 0, W, H); b.restore();
+  }
+  const [top] = skyAt(h);
+  const night = Math.max(0, Math.min(1, (Math.abs(h - 13) - 5.5) / 3));  // 0 by day, 1 at night
+  if (night > 0) {
+    b.save(); b.globalCompositeOperation = 'multiply';
+    b.fillStyle = `rgba(${mixc([255, 255, 255], [90, 90, 170], night)},1)`; b.fillRect(0, 0, W, H); b.restore();
+  }
+}
+
 function drawSky() {
   // Outdoor scenery plate fits the window glass exactly. Time of day tints it for now;
   // dedicated dusk/night plates replace the tint later.
@@ -58,6 +75,7 @@ function frame(ms) {
   b.clearRect(0, 0, W, H);
   drawSky();                  // 2. outdoor scenery, behind the window
   b.drawImage(shell, 0, 0);   // 1+3. room architecture and window frame (window glass is transparent)
+  drawAmbient();
   // 4-10 (shelves, furniture, plants, rug, kitty, weather) come in later stages
   ctx.imageSmoothingEnabled = false;
   ctx.drawImage(buf, view.ox, view.oy, W * view.s, H * view.s);

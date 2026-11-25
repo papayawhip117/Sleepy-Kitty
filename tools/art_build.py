@@ -10,7 +10,7 @@ ROOT = Path(__file__).resolve().parent.parent
 SRC, OUT = ROOT / "art" / "layers", ROOT / "public" / "art"
 OUT.mkdir(parents=True, exist_ok=True)
 
-shell = np.array(Image.open(SRC / "room-shell-v1.png").convert("RGBA"))
+shell = np.array(Image.open(SRC / "shell-flat-v1.png").convert("RGBA"))
 key = (shell[..., 0] == 255) & (shell[..., 1] == 0) & (shell[..., 2] == 255)
 ys, xs = key.nonzero()
 window = [int(xs.min()), int(ys.min()), int(xs.max()) + 1, int(ys.max()) + 1]
