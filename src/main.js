@@ -38,7 +38,8 @@ function skyAt(h) {
   return [mixc(hex(t0), hex(t1), t), mixc(hex(b0), hex(b1), t)];
 }
 const params = new URLSearchParams(location.search);
-const hourNow = () => params.has('hour') ? +params.get('hour') : new Date().getHours() + new Date().getMinutes() / 60;
+let hourOverride = params.has('hour') ? +params.get('hour') : null;   // null = follow the real clock
+const hourNow = () => hourOverride ?? new Date().getHours() + new Date().getMinutes() / 60;
 
 let lampOn = null;   // null = follow the clock, true/false = switched by clicking the desk lamp
 const LAMP_HIT = [44, 136, 92, 172];   // room units around the lamp shade and arm
@@ -240,3 +241,12 @@ canvas.addEventListener('pointerdown', (ev) => { const [x, y] = toRoom(ev); if (
 canvas.addEventListener('pointermove', (ev) => { const [x, y] = toRoom(ev); kitty.move(x, y); if (kitty.k.state !== 'held') canvas.style.cursor = kitty.hit(x, y) ? 'grab' : 'default'; });
 canvas.addEventListener('pointerup', () => { if (kitty.k.state === 'held') { kitty.up(lightAt(hourNow()).lamp); canvas.style.cursor = 'grab'; } });
 if (params.has('debug')) window.kitty = kitty;   // test hook: ?debug
+
+// Start page and settings (src/start.js). Time and weather choices are remembered in this browser.
+import { initStart } from './start.js';
+initStart({
+  setTime: (h) => { hourOverride = h; },
+  setWeather: (w) => { if (w in WEATHER) weather = w; },
+  hasUrlOverrides: params.has('hour') || params.has('weather'),
+  skip: params.has('nostart'),
+});
