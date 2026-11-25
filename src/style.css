@@ -1,2 +1,4 @@
-html, body { margin: 0; height: 100%; overflow: hidden; background: #3a2350; }
-#room { position: fixed; inset: 0; width: 100%; height: 100%; display: block; image-rendering: pixelated; }
+/* The canvas always covers the whole window; the room is cropped, never stretched or letterboxed.
+   The page colour is the room's wood tone so no bar could ever show as black or purple. */
+html, body { margin: 0; width: 100%; height: 100%; overflow: hidden; background: #8a523d; }
+#room { position: fixed; inset: 0; width: 100vw; height: 100vh; height: 100dvh; display: block; image-rendering: pixelated; touch-action: none; }
