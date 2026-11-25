@@ -3,9 +3,10 @@
 // no letterboxing. On a window that is not 16:9, the outer edge of the room is cropped, so the ceiling edge and
 // outer wall margins are what get cropped; the floor and window stay in view.
 const W = 480, H = 270;
+const K = 2;   // the room buffer is 2x (960x540): room layers are doubled exactly, furniture is cut at 2x for finer detail
 const canvas = document.getElementById('room');
 const ctx = canvas.getContext('2d');
-const buf = document.createElement('canvas'); buf.width = W; buf.height = H;
+const buf = document.createElement('canvas'); buf.width = W * K; buf.height = H * K;
 const b = buf.getContext('2d'); b.imageSmoothingEnabled = false;
 
 const load = (src) => new Promise((res, rej) => { const i = new Image(); i.onload = () => res(i); i.onerror = rej; i.src = src; });
@@ -31,17 +32,17 @@ const hourNow = () => params.has('hour') ? +params.get('hour') : new Date().getH
 
 // Sunbeams: painted light shapes on the wall and floor. Strongest in the morning/afternoon, warmer near
 // sunrise/sunset, gone at night. Drawn right after the room shell so furniture sits in front of the light.
-const beamBuf = document.createElement('canvas'); beamBuf.width = W; beamBuf.height = H;
+const beamBuf = document.createElement('canvas'); beamBuf.width = W * K; beamBuf.height = H * K;
 const bb = beamBuf.getContext('2d');
 function drawSunbeams() {
   const h = hourNow();
   const beam = Math.max(0, Math.min(1, 1 - Math.abs(h - 12.5) / 6.5));
   if (beam <= 0) return;
-  bb.clearRect(0, 0, W, H); bb.globalCompositeOperation = 'source-over'; bb.globalAlpha = 1;
-  bb.drawImage(sunbeams, 0, 0);
+  bb.imageSmoothingEnabled = false; bb.clearRect(0, 0, W * K, H * K); bb.globalCompositeOperation = 'source-over'; bb.globalAlpha = 1;
+  bb.drawImage(sunbeams, 0, 0, W * K, H * K);
   const low = 1 - Math.min(1, Math.abs(h - 12.5) / 4);              // warm orange tint when the sun is low
-  if (low < 1) { bb.globalCompositeOperation = 'source-atop'; bb.globalAlpha = 0.6 * (1 - low); bb.fillStyle = '#FF8A78'; bb.fillRect(0, 0, W, H); }
-  b.save(); b.globalAlpha = 0.5 * Math.min(1, beam * 1.6); b.drawImage(beamBuf, 0, 0); b.restore();
+  if (low < 1) { bb.globalCompositeOperation = 'source-atop'; bb.globalAlpha = 0.6 * (1 - low); bb.fillStyle = '#FF8A78'; bb.fillRect(0, 0, W * K, H * K); }
+  b.save(); b.globalAlpha = 0.5 * Math.min(1, beam * 1.6); b.setTransform(1, 0, 0, 1, 0, 0); b.drawImage(beamBuf, 0, 0); b.restore();
 }
 
 function drawAmbient() {
@@ -88,13 +89,14 @@ const LAYOUT = {
 // Contact shadows are built from each sprite's own silhouette (lowest opaque pixel per column), so they follow
 // legs, drawers and the duvet hem exactly. Hard-edged 1px steps, no blur: pixel-art friendly.
 function contactShadow(img) {
-  const c = document.createElement('canvas'); c.width = img.width; c.height = img.height + 7;
+  const c = document.createElement('canvas'); c.width = img.width; c.height = img.height + 14;
   const g = c.getContext('2d'); g.drawImage(img, 0, 0);
   const d = g.getImageData(0, 0, c.width, c.height), out = g.createImageData(c.width, c.height);
   let lowest = 0; const bottom = [];
   for (let x = 0; x < img.width; x++) { let y = img.height - 1; while (y >= 0 && d.data[(y * c.width + x) * 4 + 3] < 128) y--; bottom.push(y); lowest = Math.max(lowest, y); }
-  bottom.forEach((y, x) => { if (y < lowest - 8) return;           // only columns that actually touch the floor
-    [[-1, 150], [0, 150], [1, 120], [2, 90], [3, 60], [4, 30]].forEach(([dy, a]) => { const o = ((y + dy + 1) * c.width + x) * 4; out.data.set([70, 36, 80, a], o); }); });
+  const steps = [150, 150, 120, 90, 60, 30].flatMap((a) => [a, a]);   // 1 logical px = K art pixels
+  bottom.forEach((y, x) => { if (y < lowest - 8 * K) return;       // only columns that actually touch the floor
+    steps.forEach((a, i) => { out.data.set([70, 36, 80, a], ((y - K + 1 + i) * c.width + x) * 4); }); });
   g.clearRect(0, 0, c.width, c.height); g.putImageData(out, 0, 0); return c;
 }
 for (const k of ['desk', 'bed']) LAYOUT[k].shadow = contactShadow(LAYOUT[k].img);
@@ -108,20 +110,22 @@ function resize() {
   const cover = Math.max(canvas.width / W, canvas.height / H);          // smallest scale that fills the window
   // Whole-number scale keeps every art pixel the same size. Round up only when that crops little extra (<=12%);
   // otherwise keep the exact cover scale, since going smaller would leave bars.
-  const up = Math.ceil(cover - 1e-6), s = up / cover <= 1.12 ? up : cover;
+  const up = Math.ceil(cover / K - 1e-6) * K, s = up / cover <= 1.12 ? up : cover;   // multiples of K keep the 2x buffer pixels even
   view = { s, ox: (canvas.width - W * s) / 2, oy: (canvas.height - H * s) * 0.8 }; // crop mostly ceiling, keep floor for the kitty
 }
 addEventListener('resize', resize); visualViewport?.addEventListener('resize', resize); resize();
 
 function frame(ms) {
   const t = ms / 1000;
+  b.setTransform(K, 0, 0, K, 0, 0); b.imageSmoothingEnabled = false;   // draw in 480x270 room units
   b.clearRect(0, 0, W, H);
   drawSky();                  // 2. outdoor scenery, behind the window
   b.drawImage(shell, 0, 0);   // 1+3. room architecture and window frame (window glass is transparent)
   drawSunbeams();
   // 4-7: floor rug first, then furniture on top of it (back to front by floor position)
-  b.drawImage(LAYOUT.rug.img, LAYOUT.rug.x, LAYOUT.rug.y);
-  for (const k of ['desk', 'bed']) { const L = LAYOUT[k]; b.drawImage(L.shadow, L.x, L.y); b.drawImage(L.img, L.x, L.y); }
+  const dw = (i) => i.width / K, dh = (i) => i.height / K;   // sprites are 2x art, drawn at room units
+  b.drawImage(LAYOUT.rug.img, LAYOUT.rug.x, LAYOUT.rug.y, dw(LAYOUT.rug.img), dh(LAYOUT.rug.img));
+  for (const k of ['desk', 'bed']) { const L = LAYOUT[k]; b.drawImage(L.shadow, L.x, L.y, dw(L.shadow), dh(L.shadow)); b.drawImage(L.img, L.x, L.y, dw(L.img), dh(L.img)); }
   drawAmbient();
   // 4-10 (shelves, furniture, plants, rug, kitty, weather) come in later stages
   ctx.imageSmoothingEnabled = false;

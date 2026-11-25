@@ -1,0 +1,48 @@
+{
+  "piece": "bedx2s",
+  "size": [
+    380,
+    253
+  ],
+  "source_px_per_pixel": 4.04,
+  "colours_used": 96,
+  "top_colours": [
+    [
+      "h0050",
+      8560
+    ],
+    [
+      "h104",
+      6042
+    ],
+    [
+      "h0110",
+      5843
+    ],
+    [
+      "h0048",
+      4951
+    ],
+    [
+      "h1116",
+      3899
+    ],
+    [
+      "h1119",
+      3029
+    ],
+    [
+      "h1118",
+      2587
+    ],
+    [
+      "h0049",
+      2002
+    ]
+  ],
+  "off_palette_share": 0.015,
+  "dither_share_before_cleanup": 0.004,
+  "lone_pixels_fixed": 151,
+  "transparent_share": 0.363,
+  "warnings": []
+}
