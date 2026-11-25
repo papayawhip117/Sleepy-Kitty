@@ -15,8 +15,8 @@ key = (shell[..., 0] == 255) & (shell[..., 1] == 0) & (shell[..., 2] == 255)
 ys, xs = key.nonzero()
 window = [int(xs.min()), int(ys.min()), int(xs.max()) + 1, int(ys.max()) + 1]
 # also clear a 1px fringe of near-magenta pixels around the window so no pink edge shows
-near = (shell[..., 0] > 200) & (shell[..., 1] < 90) & (shell[..., 2] > 150)
-for _ in range(2):
+near = (shell[..., 0] > 190) & (shell[..., 1] < 150) & (shell[..., 2] > 140) & (shell[..., 2] > shell[..., 1] + 30)
+for _ in range(3):
     grow = key.copy(); grow[1:] |= key[:-1]; grow[:-1] |= key[1:]; grow[:, 1:] |= key[:, :-1]; grow[:, :-1] |= key[:, 1:]
     key = key | (grow & near)
 shell[key, 3] = 0
@@ -29,3 +29,29 @@ for n in ("scenery-day-v1",):
     shutil.copy(SRC / f"{n}.png", OUT / (n.replace("-v1", "") + ".png"))
 
 shutil.copy(SRC / "sunbeams-v1.png", OUT / "sunbeams.png")
+
+# ---- furniture layers (Stage 2) ----
+from PIL import ImageOps
+desk = Image.open(SRC / "desk-v1.png").convert("RGBA")
+import colorsys
+da = np.array(desk)
+for y in range(desk.height):
+    for x in range(desk.width):
+        r, g, b_, a_ = da[y, x]
+        if not a_:
+            continue
+        h, l, sat = colorsys.rgb_to_hls(r / 255, g / 255, b_ / 255)
+        if y >= 90 and 0.80 <= h <= 0.97 and 0.55 <= l <= 0.85:
+            da[y, x, 3] = 0                                  # lilac floor/knee shadow baked into the desk art
+        if y >= 143 and l > 0.78 and (h < 0.06 or h > 0.9):
+            da[y, x, 3] = 0                                  # pink floor shadow under the legs
+        if 15 <= x <= 50 and 38 <= y <= 52:
+            da[y, x, 3] = 0                                  # remnant of a small wall frame
+        if 95 <= x <= 130 and 41 <= y <= 42:
+            da[y, x, 3] = 0                                  # tail of the shelf vine above the lamp
+desk = Image.fromarray(da)
+body = desk.crop((0, 41, desk.width, desk.height))          # below the wall shelf, which is placed separately
+body = ImageOps.mirror(body)                                 # lamp ends up on the left, clear of the window
+body.save(OUT / "desk-body.png")
+shutil.copy(SRC / "bed-v2.png", OUT / "bed.png")
+shutil.copy(SRC / "rug-v2.png", OUT / "rug.png")
