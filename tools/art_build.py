@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Copy the approved layers into public/art for the game, turning the magenta window into real transparency
 and writing art/scene manifest data the game reads (window rectangle)."""
-import json
+import json, sys
 from pathlib import Path
 import numpy as np
 from PIL import Image
@@ -52,6 +52,28 @@ for y in range(desk.height):
 desk = Image.fromarray(da)
 body = desk.crop((0, 41, desk.width, desk.height))          # below the wall shelf, which is placed separately
 body = ImageOps.mirror(body)                                 # lamp ends up on the left, clear of the window
+sys.path.insert(0, str(Path(__file__).parent))
+from art_tidy import tidy, hls
+ba = np.array(body)
+yy, xx = np.mgrid[0:ba.shape[0], 0:ba.shape[1]]
+l_, s_ = hls(ba)
+pale_pink = (l_ > 0.72) & (ba[..., 0] > ba[..., 1])
+ba[pale_pink & (yy >= 88) & ((xx < 90) | (xx > 130) | (yy >= 104)), 3] = 0   # floor-shadow specks (blanket sits x90-130, y<104)
+ba = tidy(ba, min_island=30, fringe=lambda a: (xx >= 96) & (yy <= 80) & (hls(a)[0] > 0.72))  # cream fringe on the leaves
+body = Image.fromarray(ba)
 body.save(OUT / "desk-body.png")
 shutil.copy(SRC / "bed-v3.png", OUT / "bed.png")
-shutil.copy(SRC / "rug-v3.png", OUT / "rug.png")
+ra = np.array(Image.open(SRC / "rug-v3.png").convert("RGBA"))
+for _ in range(2):                                           # majority filter: smooths the ragged silhouette
+    op = (ra[..., 3] > 0).astype(int); pad = np.pad(op, 1)
+    cnt = sum(pad[1 + dy:pad.shape[0] - 1 + dy, 1 + dx:pad.shape[1] - 1 + dx] for dy in (-1, 0, 1) for dx in (-1, 0, 1))
+    newop = cnt >= 5
+    fill = newop & (ra[..., 3] == 0)                         # grow into a gap: copy the nearest opaque neighbour colour
+    for y, x in zip(*np.nonzero(fill)):
+        for dy, dx in ((0, 1), (0, -1), (1, 0), (-1, 0)):
+            yy, xx = y + dy, x + dx
+            if 0 <= yy < ra.shape[0] and 0 <= xx < ra.shape[1] and ra[yy, xx, 3]:
+                ra[y, x] = ra[yy, xx]; break
+    ra[~newop, 3] = 0
+ra = tidy(ra, min_island=40, spur_passes=2)
+Image.fromarray(ra).save(OUT / "rug.png")
