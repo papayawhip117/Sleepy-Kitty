@@ -225,6 +225,7 @@ def main():
     ap.add_argument("--halo", type=float, default=0.06, help="--bg grow: how different an edge pixel may be from the background and still be peeled")
     ap.add_argument("--peel-light", type=float, help="peel up to 2px of very light edge fringe (sticker outline) with OKLab lightness above this, e.g. 0.88")
     ap.add_argument("--holes", type=float, default=0.0, help="--bg grow: also clear enclosed pixels this close (OKLab) to the background colour, e.g. 0.03")
+    ap.add_argument("--shadow", help="hex colour of a painted wall shadow; those pixels become a soft translucent shadow that works on any wall")
     ap.add_argument("--keep-key", action="store_true", help="keep magenta as an opaque colour (window cutout mask)")
     ap.add_argument("--keep-noise", action="store_true")
     ap.add_argument("--name", help="output name, default = source file name")
@@ -262,6 +263,13 @@ def main():
     if a.bg == "grow":
         small = np.array(Image.fromarray(rgb).resize((out_w, out_h), Image.Resampling.BOX))
         q[grow_mask(small, halo=a.halo, hole_tol=a.holes)] = -1
+    shadow_mask = None
+    if a.shadow:
+        small = np.array(Image.fromarray(rgb).resize((out_w, out_h), Image.Resampling.BOX))
+        sl = to_oklab(small.reshape(-1, 3).astype(float)).reshape(out_h, out_w, 3)
+        sc = to_oklab(np.array([hex_rgb(a.shadow)], dtype=float))[0]
+        shadow_mask = np.sqrt(((sl - sc) ** 2).sum(-1)) < 0.04
+        q[shadow_mask] = -1
     if a.peel_light:
         full_pal = np.vstack([pal, np.array([key], dtype=np.uint8)])
         L = to_oklab(full_pal)[:, 0]
@@ -281,6 +289,8 @@ def main():
     out[m, :3] = full[q[m]]
     out[m, 3] = 255
 
+    if shadow_mask is not None:
+        out[shadow_mask] = (58, 35, 80, 56)  # plum at ~22% opacity
     name = a.name or Path(a.src).stem
     od = Path(a.out)
     (od / "preview").mkdir(parents=True, exist_ok=True)
