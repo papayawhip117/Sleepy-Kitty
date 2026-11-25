@@ -1,0 +1,48 @@
+{
+  "piece": "room-base-v1",
+  "size": [
+    480,
+    270
+  ],
+  "source_px_per_pixel": 3.48,
+  "colours_used": 49,
+  "top_colours": [
+    [
+      "key",
+      27385
+    ],
+    [
+      "h0015",
+      6787
+    ],
+    [
+      "h112",
+      4757
+    ],
+    [
+      "h003",
+      4124
+    ],
+    [
+      "h0019",
+      3881
+    ],
+    [
+      "h0016",
+      3879
+    ],
+    [
+      "h1110",
+      3856
+    ],
+    [
+      "h002",
+      3692
+    ]
+  ],
+  "off_palette_share": 0.004,
+  "dither_share_before_cleanup": 0.003,
+  "lone_pixels_fixed": 309,
+  "transparent_share": 0.0,
+  "warnings": []
+}
