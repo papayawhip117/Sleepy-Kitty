@@ -23,3 +23,7 @@ shell[key, 3] = 0
 Image.fromarray(shell).save(OUT / "room-shell.png")
 json.dump({"size": [480, 270], "window": window}, open(OUT / "scene.json", "w"))
 print("window", window)
+
+import shutil
+for n in ("scenery-day-v1",):
+    shutil.copy(SRC / f"{n}.png", OUT / (n.replace("-v1", "") + ".png"))

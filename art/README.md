@@ -143,3 +143,4 @@ so it sits against the right side of the room.
   in palette. Still has baked diagonal sunbeams on the left wall and floor. The full scene is now described in
   `scenes/room-v1.json` and rendered with `python3 tools/art_mock.py art/scenes/room-v1.json <out.png>`
   (the window is filled with a stand-in sky). Mock: `mocks/room-mock-v8.png`.
+- **scenery-day-v1** (ChatGPT, 1586x992): cut to the window glass (225x137, aspect cropped), 17 colours added to the palette (now 80). Drawn behind the frame by src/main.js.

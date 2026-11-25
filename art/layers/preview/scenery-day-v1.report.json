@@ -1,0 +1,48 @@
+{
+  "piece": "scenery-day-v1",
+  "size": [
+    225,
+    137
+  ],
+  "source_px_per_pixel": 7.05,
+  "colours_used": 46,
+  "top_colours": [
+    [
+      "h016",
+      3211
+    ],
+    [
+      "h051",
+      2635
+    ],
+    [
+      "h062",
+      2278
+    ],
+    [
+      "h020",
+      2142
+    ],
+    [
+      "h052",
+      1896
+    ],
+    [
+      "h063",
+      1746
+    ],
+    [
+      "h050",
+      1723
+    ],
+    [
+      "h0111",
+      1704
+    ]
+  ],
+  "off_palette_share": 0.018,
+  "dither_share_before_cleanup": 0.007,
+  "lone_pixels_fixed": 198,
+  "transparent_share": 0.0,
+  "warnings": []
+}
