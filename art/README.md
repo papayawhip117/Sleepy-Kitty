@@ -139,3 +139,7 @@ so it sits against the right side of the room.
   chibi-sized (about 45px long asleep). Mock: `mocks/room-mock-v6.png`.
 - **bed-v2** (ChatGPT edit on flat black, no plushie): replaces bed-v1. Cleaned with `--width 160 --bg auto`,
   with clean edges and 1.5% off-palette. Mock: `mocks/room-mock-v7.png`.
+- **room-shell-v1** (ChatGPT edit of room-base-v1): clean empty shell with magenta window, 42 colours, all
+  in palette. Still has baked diagonal sunbeams on the left wall and floor. The full scene is now described in
+  `scenes/room-v1.json` and rendered with `python3 tools/art_mock.py art/scenes/room-v1.json <out.png>`
+  (the window is filled with a stand-in sky). Mock: `mocks/room-mock-v8.png`.
