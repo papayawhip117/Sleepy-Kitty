@@ -17,7 +17,10 @@ const [wx0, wy0, wx1, wy1] = scene.window;
 // fills the right, so she walks the open middle freely and only in front of the bed on the right.
 const kitty = createKitty(kittyImg, kittyMeta, K, {
   floor: { x0: 200, x1: 425, y0: 240, y1: 268, bedX: 296, yFront: 262 },
-  bed: { approach: { x: 292, y: 263 }, spot: { x: 372, y: 224 }, spotMin: 340, spotMax: 420, zone: [305, 180, 445, 245] },
+  perches: {   // the only places she may lie down besides the floor
+    bed: { approach: { x: 292, y: 263 }, spot: { x: 372, y: 224 }, spotMin: 340, spotMax: 420, zone: [305, 180, 445, 245] },
+    sill: { approach: { x: 245, y: 240 }, spot: { x: 245, y: 192 }, spotMin: 205, spotMax: 290, zone: [195, 150, 300, 205] },
+  },
 });
 
 // ---- outdoor scenery ----
@@ -37,6 +40,8 @@ function skyAt(h) {
 const params = new URLSearchParams(location.search);
 const hourNow = () => params.has('hour') ? +params.get('hour') : new Date().getHours() + new Date().getMinutes() / 60;
 
+let lampOn = null;   // null = follow the clock, true/false = switched by clicking the desk lamp
+const LAMP_HIT = [44, 136, 92, 172];   // room units around the lamp shade and arm
 // ---- lighting: one neutral room, lit in code ----
 // Every look is a preset on the hour clock, blended smoothly. No second room image is ever needed.
 //   tint  : multiply colour over the room (white = untouched)       beam : sunbeam overlay strength
@@ -198,7 +203,8 @@ function frame(ms) {
   b.setTransform(K, 0, 0, K, 0, 0); b.imageSmoothingEnabled = false;   // draw in 480x270 room units
   b.clearRect(0, 0, W, H);
   const dt = Math.min(0.1, t - (frame.last ?? t)); frame.last = t; stepWeather(dt);
-  const L = lightAt(hourNow());
+  const L = lightAt(hourNow()), night = L.lamp;       // night (0..1) drives the kitty's habits; the lamp switch only changes the glow
+  if (lampOn !== null) L.lamp = lampOn ? 1 : 0;
   drawSky();                  // 2. outdoor scenery, behind the window
   drawPrecip(t);              // rain / snow outside, behind the frame
   b.drawImage(shell, 0, 0);   // 1+3. room architecture and window frame (window glass is transparent)
@@ -208,7 +214,7 @@ function frame(ms) {
   const dw = (i) => i.width / K, dh = (i) => i.height / K;   // sprites are 2x art, drawn at room units
   b.drawImage(LAYOUT.rug.img, LAYOUT.rug.x, LAYOUT.rug.y, dw(LAYOUT.rug.img), dh(LAYOUT.rug.img));
   for (const k of ['desk', 'bed']) { const L = LAYOUT[k]; b.drawImage(L.shadow, L.x, L.y, dw(L.shadow), dh(L.shadow)); b.drawImage(L.img, L.x, L.y, dw(L.img), dh(L.img)); }
-  kitty.update(dt, L.lamp); kitty.draw(b);   // 8. the kitty, in front of all furniture, lit by the same ambient pass
+  kitty.update(dt, night); kitty.draw(b);   // 8. the kitty, in front of all furniture, lit by the same ambient pass
   drawAmbient(L);
   // 4-10 (shelves, furniture, plants, rug, kitty, weather) come in later stages
   ctx.imageSmoothingEnabled = false;
@@ -220,6 +226,7 @@ requestAnimationFrame(frame);
 // Click the window to change the weather.
 canvas.addEventListener('click', (ev) => {
   if (suppressClick) { suppressClick = false; return; }
+  { const [lx, ly] = toRoom(ev); if (lx >= LAMP_HIT[0] && lx <= LAMP_HIT[2] && ly >= LAMP_HIT[1] && ly <= LAMP_HIT[3]) { lampOn = !(lampOn ?? lightAt(hourNow()).lamp > 0.5); return; } }
   const r = canvas.getBoundingClientRect(), dpr = canvas.width / r.width;
   const x = ((ev.clientX - r.left) * dpr - view.ox) / view.s, y = ((ev.clientY - r.top) * dpr - view.oy) / view.s;
   if (x >= wx0 - 8 && x <= wx1 + 8 && y >= wy0 - 8 && y <= wy1 + 8) weather = WEATHER_ORDER[(WEATHER_ORDER.indexOf(weather) + 1) % WEATHER_ORDER.length];

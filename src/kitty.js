@@ -4,25 +4,30 @@
 const HEART = [[-1, 0], [1, 0], [-2, 1], [-1, 1], [0, 1], [1, 1], [2, 1], [-1, 2], [0, 2], [1, 2], [0, 3]];   // 5x4 pixel heart
 export function createKitty(img, meta, K, world) {
   const [cw, ch] = meta.cell, R = (n) => meta.rows[n].row;
-  const k = { x: 250, y: 252, face: 1, state: 'idle', t: 0, anim: 0, onBed: false, hearts: [], vy: 0, held: null, dest: null, next: 3 };
+  const k = { x: 250, y: 252, face: 1, state: 'idle', t: 0, anim: 0, perch: null, hearts: [], vy: 0, held: null, dest: null, next: 3 };
   const rand = (a, b) => a + Math.random() * (b - a);
   const floorClamp = () => { k.x = Math.min(world.floor.x1, Math.max(world.floor.x0, k.x)); k.y = Math.min(world.floor.y1, Math.max(k.x > world.floor.bedX ? world.floor.yFront : world.floor.y0, k.y)); };
 
   function set(state, dur) { k.state = state; k.t = 0; k.dur = dur; k.anim = 0; }
+  const P = world.perches;                                                    // { bed, sill }: approach, spot, zone, spotMin/Max
+  const perchAt = (x, y) => Object.keys(P).find((n) => x > P[n].zone[0] && x < P[n].zone[2] && y > P[n].zone[1] && y < P[n].zone[3]);
   function think(night) {
     const r = Math.random();
-    if (k.onBed) { if (r < 0.6 - night * 0.4) { hopDown(); } else set('sleep', rand(25, 60)); return; }
-    const toBed = 0.22 + night * 0.4, sleepFloor = 0.12 + night * 0.15;
-    if (r < toBed) { k.dest = { x: world.bed.approach.x, y: world.bed.approach.y, then: 'hopUp' }; set('walk', 99); }
-    else if (r < toBed + sleepFloor) set('sleep', rand(15, 40));
-    else if (r < toBed + sleepFloor + 0.45) { { const x = rand(world.floor.x0 + 10, world.floor.x1 - 10); k.dest = { x, y: rand(x > world.floor.bedX ? world.floor.yFront : world.floor.y0, world.floor.y1) }; } set('walk', 99); }
-    else if (r < 0.92) set('stretch', 1.4);
+    if (k.perch) { if (r < 0.5 - night * 0.35) hop(null); else set('sleep', rand(25, 60)); return; }
+    const toBed = 0.2 + night * 0.4, toSill = 0.14 * (1 - night * 0.7), sleepFloor = 0.1 + night * 0.1;
+    if (r < toBed) { k.dest = { ...P.bed.approach, then: 'bed' }; set('walk', 99); }
+    else if (r < toBed + toSill) { k.dest = { ...P.sill.approach, then: 'sill' }; set('walk', 99); }
+    else if (r < toBed + toSill + sleepFloor) set('sleep', rand(15, 40));
+    else if (r < toBed + toSill + sleepFloor + 0.4) { const x = rand(world.floor.x0 + 10, world.floor.x1 - 10); k.dest = { x, y: rand(x > world.floor.bedX ? world.floor.yFront : world.floor.y0, world.floor.y1) }; set('walk', 99); }
+    else if (r < 0.93) set('stretch', 1.4);
     else set('idle', rand(3, 7));
   }
-  function hopUp() { k.hop = { x0: k.x, y0: k.y, x1: world.bed.spot.x, y1: world.bed.spot.y, t: 0, dur: 0.75, onBed: true }; set('hop', 0.75); }
-  function hopDown() { k.hop = { x0: k.x, y0: k.y, x1: world.bed.approach.x, y1: world.bed.approach.y, t: 0, dur: 0.6, onBed: false }; set('hop', 0.6); }
-  const overBed = (x, y) => x > world.bed.zone[0] && x < world.bed.zone[2] && y > world.bed.zone[1] && y < world.bed.zone[3];
-
+  // hop to a perch (name) or back down to the floor (null, from wherever she is)
+  function hop(name) {
+    const from = k.perch, to = name ? P[name].spot : { x: P[from].approach.x, y: P[from].approach.y }, dur = name ? 0.85 : 0.65;
+    k.hop = { x0: k.x, y0: k.y, x1: to.x, y1: to.y, t: 0, dur, perch: name, lift: name === 'sill' ? 62 : 26, down: !name && from === 'sill' };
+    set('hop', dur);
+  }
   function update(dt, night) {
     k.t += dt;
     for (const h of k.hearts) { h.t += dt; }
@@ -31,18 +36,18 @@ export function createKitty(img, meta, K, world) {
     if (k.state === 'fall') {
       k.vy += 420 * dt; k.y += k.vy * dt;
       const ground = k.fallTo;
-      if (k.y >= ground) { k.y = ground; k.onBed = !!k.landBed; set(k.onBed ? 'sleep' : 'idle', k.onBed ? rand(20, 40) : 2.5); }
+      if (k.y >= ground) { k.y = ground; k.perch = k.landPerch || null; set(k.perch ? 'sleep' : 'idle', k.perch ? rand(20, 40) : 2.5); }
       return;
     }
     if (k.state === 'hop') {
       const h = k.hop, p = Math.min(1, (h.t += dt) / h.dur);
-      k.x = h.x0 + (h.x1 - h.x0) * p; k.y = h.y0 + (h.y1 - h.y0) * p - Math.sin(p * Math.PI) * 26; k.face = h.x1 >= h.x0 ? 1 : -1;
-      if (p >= 1) { k.onBed = h.onBed; k.x = h.x1; k.y = h.y1; set(k.onBed ? 'sleep' : 'idle', k.onBed ? rand(25, 60) : 1.5); }
+      k.x = h.x0 + (h.x1 - h.x0) * p; k.y = h.y0 + (h.y1 - h.y0) * p - Math.sin(p * Math.PI) * h.lift; k.face = h.x1 >= h.x0 ? 1 : -1;
+      if (p >= 1) { k.perch = h.perch; k.x = h.x1; k.y = h.y1; set(k.perch ? 'sleep' : 'idle', k.perch ? rand(25, 60) : 1.5); }
       return;
     }
     if (k.state === 'walk') {
       const d = k.dest, dx = d.x - k.x, dy = d.y - k.y, dist = Math.hypot(dx, dy), sp = 22 * dt;
-      if (dist <= sp) { k.x = d.x; k.y = d.y; if (d.then === 'hopUp') hopUp(); else set('idle', rand(2, 5)); }
+      if (dist <= sp) { k.x = d.x; k.y = d.y; if (d.then) hop(d.then); else set('idle', rand(2, 5)); }
       else { k.x += dx / dist * sp; k.y += dy / dist * sp * 0.8; if (Math.abs(dx) > 1) k.face = dx > 0 ? 1 : -1; }
       return;
     }
@@ -89,7 +94,7 @@ export function createKitty(img, meta, K, world) {
   }
   // pointer interaction (room units)
   function hit(x, y) { const r = rect(); return x >= r.x && x <= r.x + r.w && y >= r.y && y <= r.y + r.h; }
-  function down(x, y) { k.held = { x, y: y - 6, dx: x, dy: y, moved: false, t0: performance.now() }; k.state = 'held'; k.t = 0; k.onBed = false; }
+  function down(x, y) { k.held = { x, y: y - 6, dx: x, dy: y, moved: false, t0: performance.now() }; k.state = 'held'; k.t = 0; k.perch = null; }
   function move(x, y) { if (k.state !== 'held') return; if (Math.hypot(x - k.held.dx, y - k.held.dy) > 3) k.held.moved = true; k.held.x = x; k.held.y = y - 6; k.face = 1; }
   function up(night) {
     if (k.state !== 'held') return;
@@ -99,9 +104,9 @@ export function createKitty(img, meta, K, world) {
       k.hearts.push({ x: k.x, y: r.y - 4, t: 0 }); k.y = Math.min(world.floor.y1, k.y); return;
     }
     k.x = h.x; k.y = h.y + 40; k.held = null;                                // she hangs ~40 units below the scruff point
-    const bed = overBed(k.x, h.y + 40);
-    k.landBed = bed;
-    if (bed) { k.x = Math.min(world.bed.spotMax, Math.max(world.bed.spotMin, k.x)); k.fallTo = world.bed.spot.y; }
+    const pn = perchAt(k.x, h.y + 6);   // judged by where the pointer is let go
+    k.landPerch = pn || null;
+    if (pn) { k.x = Math.min(P[pn].spotMax, Math.max(P[pn].spotMin, k.x)); k.fallTo = P[pn].spot.y; k.y = Math.min(k.y, k.fallTo - 4); }
     else { floorClamp(); k.fallTo = k.y < world.floor.y0 ? Math.min(world.floor.y1, Math.max(world.floor.y0, k.y + 30)) : k.y; k.y = Math.min(k.y, k.fallTo - 4); }
     k.vy = 0; set('fall', 99);
   }
