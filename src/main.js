@@ -9,7 +9,7 @@ const buf = document.createElement('canvas'); buf.width = W; buf.height = H;
 const b = buf.getContext('2d');
 
 const load = (src) => new Promise((res, rej) => { const i = new Image(); i.onload = () => res(i); i.onerror = rej; i.src = src; });
-const [shell, scenery, scene] = await Promise.all([load('./art/room-shell.png'), load('./art/scenery-day.png'), fetch('./art/scene.json').then((r) => r.json())]);
+const [shell, scenery, sunbeams, scene] = await Promise.all([load('./art/room-shell.png'), load('./art/scenery-day.png'), load('./art/sunbeams.png'), fetch('./art/scene.json').then((r) => r.json())]);
 const [wx0, wy0, wx1, wy1] = scene.window;
 
 // ---- outdoor scenery ----
@@ -33,6 +33,15 @@ function drawAmbient() {
   // Neutral room art + code lighting. Day: soft warm light spilling from the window. Night/dusk: tint the whole room.
   const h = hourNow();
   const dayness = Math.max(0, Math.min(1, 1 - Math.abs(h - 13) / 5.5));   // 1 at midday, 0 by early morning/evening
+  // Sunbeams: painted light shapes, strongest in the morning/afternoon, warmer near sunrise/sunset, gone at night.
+  const beam = Math.max(0, Math.min(1, 1 - Math.abs(h - 12.5) / 6.5));
+  if (beam > 0) {
+    b.save(); b.globalAlpha = 0.5 * Math.min(1, beam * 1.6);
+    b.drawImage(sunbeams, 0, 0);
+    const low = 1 - Math.min(1, Math.abs(h - 12.5) / 4);           // warm orange tint when the sun is low
+    if (low < 1) { b.globalCompositeOperation = 'source-atop'; b.globalAlpha = 0.5 * (1 - low) * beam; b.fillStyle = '#FF8A78'; b.fillRect(0, 0, W, H); }
+    b.restore();
+  }
   if (dayness > 0) {
     const cx = (wx0 + wx1) / 2, g = b.createRadialGradient(cx, wy1, 10, cx, wy1 + 30, 230);
     g.addColorStop(0, `rgba(255,230,170,${0.30 * dayness})`); g.addColorStop(1, 'rgba(255,230,170,0)');

@@ -27,3 +27,5 @@ print("window", window)
 import shutil
 for n in ("scenery-day-v1",):
     shutil.copy(SRC / f"{n}.png", OUT / (n.replace("-v1", "") + ".png"))
+
+shutil.copy(SRC / "sunbeams-v1.png", OUT / "sunbeams.png")
