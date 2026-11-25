@@ -86,11 +86,12 @@ const LAYOUT = {
 let view = { s: 1, ox: 0, oy: 0 };
 function resize() {
   const dpr = window.devicePixelRatio || 1;
-  canvas.width = Math.round(innerWidth * dpr); canvas.height = Math.round(innerHeight * dpr);
+  const vw = document.documentElement.clientWidth || innerWidth, vh = document.documentElement.clientHeight || innerHeight;
+  canvas.width = Math.round(vw * dpr); canvas.height = Math.round(vh * dpr);
   const s = Math.max(canvas.width / W, canvas.height / H); // cover: fill, never stretch
   view = { s, ox: (canvas.width - W * s) / 2, oy: (canvas.height - H * s) * 0.8 }; // crop mostly ceiling, keep floor for the kitty
 }
-addEventListener('resize', resize); resize();
+addEventListener('resize', resize); visualViewport?.addEventListener('resize', resize); resize();
 
 function frame(ms) {
   const t = ms / 1000;
