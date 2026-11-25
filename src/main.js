@@ -10,7 +10,7 @@ const buf = document.createElement('canvas'); buf.width = W * K; buf.height = H 
 const b = buf.getContext('2d'); b.imageSmoothingEnabled = false;
 
 const load = (src) => new Promise((res, rej) => { const i = new Image(); i.onload = () => res(i); i.onerror = rej; i.src = src; });
-const [shell, scenery, sunbeams, deskImg, bedImg, rugImg, scene] = await Promise.all([load('./art/room-shell.png'), load('./art/scenery-day.png'), load('./art/sunbeams.png'), load('./art/desk-body.png'), load('./art/bed.png'), load('./art/rug.png'), fetch('./art/scene.json').then((r) => r.json())]);
+const [shell, scenery, sunbeams, deskImg, bedImg, rugImg, shelvesImg, hangImg, scene, shelfGlow] = await Promise.all([load('./art/room-shell.png'), load('./art/scenery-day.png'), load('./art/sunbeams.png'), load('./art/desk-body.png'), load('./art/bed.png'), load('./art/rug.png'), load('./art/shelves.png'), load('./art/plant-hanging.png'), fetch('./art/scene.json').then((r) => r.json()), fetch('./art/shelves.glow.json').then((r) => r.json())]);
 const [wx0, wy0, wx1, wy1] = scene.window;
 
 // ---- outdoor scenery ----
@@ -88,6 +88,13 @@ function drawAmbient(L) {
   // room tint: time of day x weather, multiplied over everything (scenery included) so plants and furniture at the glass match.
   const wt = wmixRoom(), tint = [0, 1, 2].map((i) => Math.round(L.tint[i] * wt[i] / 255));
   b.save(); b.globalCompositeOperation = 'multiply'; b.fillStyle = `rgb(${tint})`; b.fillRect(0, 0, W, H); b.restore();
+  if (L.lamp > 0.01) {                                    // shelf lantern and candle glow (anchors are in shelf art pixels)
+    for (const l of shelfGlow.lights) {
+      const gx = LAYOUT.shelves.x + l.x / K, gy = LAYOUT.shelves.y + l.y / K, r = l.radius / K * 1.8, g = b.createRadialGradient(gx, gy, 1, gx, gy, r);
+      g.addColorStop(0, `${l.colour}${Math.round(150 * L.lamp).toString(16).padStart(2, '0')}`); g.addColorStop(1, `${l.colour}00`);
+      b.save(); b.globalCompositeOperation = 'screen'; b.fillStyle = g; b.fillRect(gx - r, gy - r, r * 2, r * 2); b.restore();
+    }
+  }
   if (L.lamp > 0.01) {                                    // lamp glow: warm pool on the desk, wall and floor
     const g = b.createRadialGradient(LAMP.x, LAMP.y, 2, LAMP.x, LAMP.y, 70);
     g.addColorStop(0, `rgba(255,200,120,${0.55 * L.lamp})`); g.addColorStop(0.5, `rgba(255,170,100,${0.18 * L.lamp})`); g.addColorStop(1, 'rgba(255,170,100,0)');
@@ -145,6 +152,8 @@ const FLOOR_Y = 256;
 const LAYOUT = {
   rug:  { img: rugImg,  x: 142, y: 234 },            // 206x57 (was 130x38, +58%), centre x=245, runs toward the foreground, top on the floor line
   desk: { img: deskImg, x: 40,  y: FLOOR_Y - 114 },  // feet end at sprite row 114; left wall
+  shelves: { img: shelvesImg, x: 40, y: 72 },    // wall shelf above the desk, 142x99 art px = 71x50 room units, left of the window frame
+  hang: { img: hangImg, x: 390, y: 26 },         // hanging plant from the ceiling beam, right of the window, above the bed
   bed:  { img: bedImg,  x: 303, y: FLOOR_Y - 123 },  // hem ends at sprite row 123; right corner, edge past the frame
 };
 
@@ -187,6 +196,7 @@ function frame(ms) {
   drawPrecip(t);              // rain / snow outside, behind the frame
   b.drawImage(shell, 0, 0);   // 1+3. room architecture and window frame (window glass is transparent)
   drawSunbeams(L);
+  for (const k of ['shelves', 'hang']) { const i = LAYOUT[k].img; b.drawImage(i, LAYOUT[k].x, LAYOUT[k].y, i.width / K, i.height / K); }   // wall decor, behind furniture
   // 4-7: floor rug first, then furniture on top of it (back to front by floor position)
   const dw = (i) => i.width / K, dh = (i) => i.height / K;   // sprites are 2x art, drawn at room units
   b.drawImage(LAYOUT.rug.img, LAYOUT.rug.x, LAYOUT.rug.y, dw(LAYOUT.rug.img), dh(LAYOUT.rug.img));

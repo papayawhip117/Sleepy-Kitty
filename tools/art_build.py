@@ -77,3 +77,9 @@ for _ in range(2):                                           # majority filter: 
     ra[~newop, 3] = 0
 ra = tidy(ra, min_island=160, spur_passes=2)
 Image.fromarray(ra).save(OUT / "rug.png")
+
+# ---- wall pieces (Stage 3): the shelf is cut at 0.1 so one art pixel is one 2x-buffer pixel (71x50 room units);
+# the hanging plant is cut at 2x (56x101 room units). Both are cut from the raw sheets in one pass.
+for n, o in (("shelves-v1", "shelves.png"), ("plant-hanging-v2", "plant-hanging.png")):
+    Image.fromarray(tidy(np.array(Image.open(SRC / f"{n}.png").convert("RGBA")), min_island=60, spur_passes=1)).save(OUT / o)   # drops floating specks
+shutil.copy(SRC / "shelves-v1.glow.json", OUT / "shelves.glow.json")
