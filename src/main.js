@@ -9,7 +9,7 @@ const buf = document.createElement('canvas'); buf.width = W; buf.height = H;
 const b = buf.getContext('2d');
 
 const load = (src) => new Promise((res, rej) => { const i = new Image(); i.onload = () => res(i); i.onerror = rej; i.src = src; });
-const [shell, scenery, sunbeams, scene] = await Promise.all([load('./art/room-shell.png'), load('./art/scenery-day.png'), load('./art/sunbeams.png'), fetch('./art/scene.json').then((r) => r.json())]);
+const [shell, scenery, sunbeams, deskImg, bedImg, rugImg, scene] = await Promise.all([load('./art/room-shell.png'), load('./art/scenery-day.png'), load('./art/sunbeams.png'), load('./art/desk-body.png'), load('./art/bed.png'), load('./art/rug.png'), fetch('./art/scene.json').then((r) => r.json())]);
 const [wx0, wy0, wx1, wy1] = scene.window;
 
 // ---- outdoor scenery ----
@@ -29,19 +29,25 @@ function skyAt(h) {
 const params = new URLSearchParams(location.search);
 const hourNow = () => params.has('hour') ? +params.get('hour') : new Date().getHours() + new Date().getMinutes() / 60;
 
+// Sunbeams: painted light shapes on the wall and floor. Strongest in the morning/afternoon, warmer near
+// sunrise/sunset, gone at night. Drawn right after the room shell so furniture sits in front of the light.
+const beamBuf = document.createElement('canvas'); beamBuf.width = W; beamBuf.height = H;
+const bb = beamBuf.getContext('2d');
+function drawSunbeams() {
+  const h = hourNow();
+  const beam = Math.max(0, Math.min(1, 1 - Math.abs(h - 12.5) / 6.5));
+  if (beam <= 0) return;
+  bb.clearRect(0, 0, W, H); bb.globalCompositeOperation = 'source-over'; bb.globalAlpha = 1;
+  bb.drawImage(sunbeams, 0, 0);
+  const low = 1 - Math.min(1, Math.abs(h - 12.5) / 4);              // warm orange tint when the sun is low
+  if (low < 1) { bb.globalCompositeOperation = 'source-atop'; bb.globalAlpha = 0.6 * (1 - low); bb.fillStyle = '#FF8A78'; bb.fillRect(0, 0, W, H); }
+  b.save(); b.globalAlpha = 0.5 * Math.min(1, beam * 1.6); b.drawImage(beamBuf, 0, 0); b.restore();
+}
+
 function drawAmbient() {
   // Neutral room art + code lighting. Day: soft warm light spilling from the window. Night/dusk: tint the whole room.
   const h = hourNow();
   const dayness = Math.max(0, Math.min(1, 1 - Math.abs(h - 13) / 5.5));   // 1 at midday, 0 by early morning/evening
-  // Sunbeams: painted light shapes, strongest in the morning/afternoon, warmer near sunrise/sunset, gone at night.
-  const beam = Math.max(0, Math.min(1, 1 - Math.abs(h - 12.5) / 6.5));
-  if (beam > 0) {
-    b.save(); b.globalAlpha = 0.5 * Math.min(1, beam * 1.6);
-    b.drawImage(sunbeams, 0, 0);
-    const low = 1 - Math.min(1, Math.abs(h - 12.5) / 4);           // warm orange tint when the sun is low
-    if (low < 1) { b.globalCompositeOperation = 'source-atop'; b.globalAlpha = 0.5 * (1 - low) * beam; b.fillStyle = '#FF8A78'; b.fillRect(0, 0, W, H); }
-    b.restore();
-  }
   if (dayness > 0) {
     const cx = (wx0 + wx1) / 2, g = b.createRadialGradient(cx, wy1, 10, cx, wy1 + 30, 230);
     g.addColorStop(0, `rgba(255,230,170,${0.30 * dayness})`); g.addColorStop(1, 'rgba(255,230,170,0)');
@@ -69,6 +75,13 @@ function drawSky() {
   }
 }
 
+// ---- layout (480x270 room pixels). Floor starts at y=234 (baseboard ends), back wall spans x=37..439. ----
+const LAYOUT = {
+  rug:  { img: rugImg,  x: 180, y: 234 },   // centred under the window, lies flat on the floor
+  desk: { img: deskImg, x: 40,  y: 140 },   // against the left wall; feet land at y~248, inside the floor band
+  bed:  { img: bedImg,  x: 292, y: 158 },   // against the right wall; skirt bottom at y~262
+};
+
 // ---- viewport ----
 let view = { s: 1, ox: 0, oy: 0 };
 function resize() {
@@ -84,6 +97,9 @@ function frame(ms) {
   b.clearRect(0, 0, W, H);
   drawSky();                  // 2. outdoor scenery, behind the window
   b.drawImage(shell, 0, 0);   // 1+3. room architecture and window frame (window glass is transparent)
+  drawSunbeams();
+  // 4-7: floor rug first, then furniture on top of it (back to front by floor position)
+  for (const k of ['rug', 'desk', 'bed']) b.drawImage(LAYOUT[k].img, LAYOUT[k].x, LAYOUT[k].y);
   drawAmbient();
   // 4-10 (shelves, furniture, plants, rug, kitty, weather) come in later stages
   ctx.imageSmoothingEnabled = false;
