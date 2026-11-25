@@ -1,0 +1,48 @@
+{
+  "piece": "lamp-on-v1",
+  "size": [
+    51,
+    65
+  ],
+  "source_px_per_pixel": 5.98,
+  "colours_used": 36,
+  "top_colours": [
+    [
+      "h0020",
+      116
+    ],
+    [
+      "h0013",
+      96
+    ],
+    [
+      "h0021",
+      92
+    ],
+    [
+      "h0110",
+      86
+    ],
+    [
+      "h0018",
+      84
+    ],
+    [
+      "h0019",
+      59
+    ],
+    [
+      "h016",
+      41
+    ],
+    [
+      "h0022",
+      38
+    ]
+  ],
+  "off_palette_share": 0.001,
+  "dither_share_before_cleanup": 0.004,
+  "lone_pixels_fixed": 4,
+  "transparent_share": 0.722,
+  "warnings": []
+}

@@ -118,3 +118,7 @@ so it sits against the right side of the room.
 - **bed-v1** (ChatGPT, on a dark vignette): passed after `--bg grow` cleanup at width 160. 10 of its colours were added
   to the palette (lavender and pinks the warm room lacked). Mock: `mocks/bed-in-room-v1.png`. It needs the room's
   right-side bookshelf, plant and cat cushion removed before it can sit there for real.
+- **desk-lamp-v1** (ChatGPT sheet on cream): cut into `desk-v1` (146x157, lamp included), `lamp-on-v1` and
+  `lamp-off-v1` at a shared scale of 1/6 (`--box`, `--scale`, `--bg grow --peel-light 0.85` to drop the sticker-style
+  cream outline). Mock: `mocks/room-mock-v2.png`. The room's own desk, shelf and lamp must be removed before the
+  desk can sit there.

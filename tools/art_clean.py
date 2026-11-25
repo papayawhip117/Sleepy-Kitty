@@ -211,10 +211,14 @@ def checker_score(q):
 def main():
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     ap.add_argument("src")
-    ap.add_argument("--width", type=int, required=True, help="true pixel width of the finished piece")
+    ap.add_argument("--width", type=int, help="true pixel width of the finished piece")
+    ap.add_argument("--scale", type=float, help="instead of --width: final pixels per source pixel (keeps several crops of one sheet at the same scale)")
+    ap.add_argument("--box", help="crop x0,y0,x1,y1 in source pixels first (cut one piece out of a sheet)")
     ap.add_argument("--height", type=int, help="defaults to keeping the aspect ratio")
     ap.add_argument("--aspect", help="centre-crop first, e.g. 16:9 for the room shell")
     ap.add_argument("--bg", choices=["none", "auto", "grow"], default="none", help="auto: flat background from the corners; grow: soft gradient/vignette background")
+    ap.add_argument("--halo", type=float, default=0.06, help="--bg grow: how different an edge pixel may be from the background and still be peeled")
+    ap.add_argument("--peel-light", type=float, help="peel up to 2px of very light edge fringe (sticker outline) with OKLab lightness above this, e.g. 0.88")
     ap.add_argument("--keep-key", action="store_true", help="keep magenta as an opaque colour (window cutout mask)")
     ap.add_argument("--keep-noise", action="store_true")
     ap.add_argument("--name", help="output name, default = source file name")
@@ -224,6 +228,8 @@ def main():
     names, pal, key = load_palette()
     lab_pal = to_oklab(pal)
     img = Image.open(a.src).convert("RGBA")
+    if a.box:
+        img = img.crop(tuple(int(v) for v in a.box.split(",")))
     if a.aspect:
         img = crop_aspect(img, a.aspect)
     rgba = np.array(img)
@@ -244,12 +250,21 @@ def main():
     if a.keep_key:
         idx[is_key] = key_i
 
-    out_w = a.width
+    out_w = a.width or max(1, round(img.size[0] * a.scale))
     out_h = a.height or round(img.size[1] * out_w / img.size[0])
     q = downscale(idx, opaque, out_w, out_h)
     if a.bg == "grow":
         small = np.array(Image.fromarray(rgb).resize((out_w, out_h), Image.Resampling.BOX))
-        q[grow_mask(small)] = -1
+        q[grow_mask(small, halo=a.halo)] = -1
+    if a.peel_light:
+        full_pal = np.vstack([pal, np.array([key], dtype=np.uint8)])
+        L = to_oklab(full_pal)[:, 0]
+        for _ in range(2):
+            t = q < 0
+            edge = np.zeros_like(t)
+            edge[1:] |= t[:-1]; edge[:-1] |= t[1:]; edge[:, 1:] |= t[:, :-1]; edge[:, :-1] |= t[:, 1:]
+            peel = edge & (q >= 0) & (L[np.maximum(q, 0)] > a.peel_light)
+            q[peel] = -1
     checker_before = checker_score(q)
     ramp_of = {i: n.rstrip("0123456789") for i, n in enumerate(names)}
     fixed = 0 if a.keep_noise else despeckle(q, ramp_of)
