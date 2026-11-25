@@ -1,5 +1,5 @@
 import { createKitty } from './kitty.js';
-// Window Kitty. The room is authored at 480x270 and drawn from separate layers, back to front.
+// Sleepy Kitty. The room is authored at 480x270 and drawn from separate layers, back to front.
 // Viewport: the room is scaled uniformly (never stretched) until it covers the whole window, so there is
 // no letterboxing. On a window that is not 16:9, the outer edge of the room is cropped, so the ceiling edge and
 // outer wall margins are what get cropped; the floor and window stay in view.
