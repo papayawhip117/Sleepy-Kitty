@@ -131,3 +131,5 @@ so it sits against the right side of the room.
   translucent plum shadow (`--shadow "#F3BABB"`), so it works on any wall. Lantern and candle glow anchors are in
   `layers/shelves-v1.glow.json`. Kept as one layer; the plants are too tangled with the books to sway separately.
   Cody chose to keep room-base's big window, so windowseat-v1 is dropped.
+- **rug-v1** (ChatGPT, top-down): squashed to 200x56 to lie flat in the room's floor perspective. Replaces the
+  painted rug, which goes away in the room-shell edit. Mock: `mocks/room-mock-v5.png`.
