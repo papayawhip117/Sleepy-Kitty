@@ -26,14 +26,15 @@ html, body { margin: 0; width: 100%; height: 100%; overflow: hidden; background:
 #gear:hover, #gear:focus-visible { opacity: 1; }
 @media (prefers-reduced-motion: reduce) { #start { transition: none; } }
 
-/* title screen: the page is exactly the logo art's cream, so the logo sits on it with no visible box */
-#start.title { background: #fcf3ea; }
-#start .titlebox { display: flex; flex-direction: column; align-items: center; gap: 18px; }
-#start .logo, #start .startbtn img { image-rendering: pixelated; display: block; width: calc(209px * var(--s, 2)); height: auto; max-width: 86vw; }
+/* title screen: the page is the title art's own cream, so the logo and button sit on it with no visible box. The art is shown at its
+   exact pixel size (or its exact half-size copy on small screens), and doubled on very large screens, so it is never resampled. */
+#start.title { background: #fcf3e9; }
+#start .titlebox { display: flex; flex-direction: column; align-items: center; gap: 28px; }
+#start .logo, #start .startbtn img { image-rendering: pixelated; display: block; height: auto; }
 #start .startbtn { background: none; border: 0; padding: 0; cursor: pointer; transition: transform 0.1s; }
-#start .startbtn img { width: calc(234px * var(--s, 2)); }
 #start .startbtn:hover { transform: translateY(-2px); }
 #start .startbtn:active { transform: translateY(2px); }
 #start .startbtn:focus-visible { outline: 3px solid var(--honey); outline-offset: 6px; }
-@media (max-width: 560px) { #start { --s: 1; } }
-@media (min-width: 1500px) { #start { --s: 3; } }
+@media (max-width: 700px) { #start .logo { width: 188px; } #start .startbtn img { width: 232px; } #start .titlebox { gap: 20px; } }
+@media (min-width: 701px) and (max-height: 760px) { #start .logo { width: 283px; } #start .startbtn img { width: 349px; } }
+@media (min-width: 2400px) and (min-height: 1500px) { #start .logo { width: 754px; } #start .startbtn img { width: 930px; } }

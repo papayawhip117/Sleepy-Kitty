@@ -201,7 +201,7 @@ addEventListener('resize', resize); visualViewport?.addEventListener('resize', r
 
 // Curtains: 8 hand-drawn sway frames per panel. Each panel runs its own slow, slightly irregular wave, so the left and
 // right sides never move in lockstep. One art pixel = one room pixel (no resampling), hung from a static rod across the glass.
-const CURT = { x0: 112, y: 42, xr: 211, rodX: 112, rodW: 260 };   // panels hang over the window frame's side bars, so they cover as little glass as possible
+const CURT = { x0: 112, y: 35, xr: 211, rodX: 112, rodW: 260 };   // panels hang over the window frame's side bars, so they cover as little glass as possible
 function curtainFrame(t, rate, phase) {
   const gust = 0.65 + 0.35 * Math.sin(t * 0.11 + phase * 1.7);          // slow drift in strength
   const p = 0.5 + 0.5 * Math.sin(t * rate + phase) * gust;

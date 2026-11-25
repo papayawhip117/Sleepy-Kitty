@@ -18,8 +18,8 @@ export function initStart(api) {
       root.className = 'title';
       root.innerHTML = `
         <div class="titlebox">
-          <img class="logo" src="./art/start-logo.png" alt="Sleepy Kitty" width="209" height="169" />
-          <button type="button" class="startbtn" id="go" aria-label="Start"><img src="./art/start-button.png" alt="" width="234" height="60" /></button>
+          <picture><source media="(max-width: 700px)" srcset="./art/title-logo-half.png" /><img class="logo" src="./art/title-logo.png" alt="Sleepy Kitty" width="377" height="310" /></picture>
+          <button type="button" class="startbtn" id="go" aria-label="Start"><picture><source media="(max-width: 700px)" srcset="./art/title-button-half.png" /><img src="./art/title-button.png" alt="" width="465" height="120" /></picture></button>
         </div>`;
       root.querySelector('#go').addEventListener('click', hide);
       root.querySelector('#go').focus();
