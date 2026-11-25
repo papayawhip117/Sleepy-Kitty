@@ -145,3 +145,4 @@ so it sits against the right side of the room.
   (the window is filled with a stand-in sky). Mock: `mocks/room-mock-v8.png`.
 - **scenery-day-v1** (ChatGPT, 1586x992): cut to the window glass (225x137, aspect cropped), 17 colours added to the palette (now 80). Drawn behind the frame by src/main.js.
 - **shell-flat-v1** (ChatGPT, neutral lighting): the new permanent room shell (flat, no baked light), replacing room-shell-v1. 38 colours added to the palette (now 118) so the wall gradient stays smooth. The sunlit and twilight variants (shell-sunlit-v1, shell-twilight-v1) are not pixel-aligned with it (the window frame shifts about 5px), so they are not used. Day and night lighting is done in code.
+- **sunbeams-v1** (ChatGPT, light on black): converted to an alpha layer (art/layers/sunbeams-v1.png, 480x270). The game fades it by time of day and warms it near sunrise/sunset. Not palette-snapped (it is a light overlay).
