@@ -1,0 +1,48 @@
+{
+  "piece": "plant-pothos-stool-v1",
+  "size": [
+    65,
+    109
+  ],
+  "source_px_per_pixel": 7.0,
+  "colours_used": 48,
+  "top_colours": [
+    [
+      "h020",
+      613
+    ],
+    [
+      "h013",
+      546
+    ],
+    [
+      "h016",
+      431
+    ],
+    [
+      "h011",
+      377
+    ],
+    [
+      "h010",
+      247
+    ],
+    [
+      "h0010",
+      211
+    ],
+    [
+      "grey1",
+      136
+    ],
+    [
+      "h0020",
+      127
+    ]
+  ],
+  "off_palette_share": 0.011,
+  "dither_share_before_cleanup": 0.008,
+  "lone_pixels_fixed": 27,
+  "transparent_share": 0.397,
+  "warnings": []
+}

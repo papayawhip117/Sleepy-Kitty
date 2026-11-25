@@ -101,7 +101,7 @@ def background_mask(rgb, key, auto_bg, tol_key=90, tol_bg=28):
     return mask
 
 
-def grow_mask(rgb_small, step=0.03, halo=0.06, min_blob=12):
+def grow_mask(rgb_small, step=0.03, halo=0.06, min_blob=12, hole_tol=0.0):
     """Background on a soft gradient/vignette (no flat colour): grow from the border
     through neighbours whose colour changes only a little per pixel. Then peel halo
     pixels on the edge and drop tiny specks. Works at native resolution."""
@@ -149,6 +149,11 @@ def grow_mask(rgb_small, step=0.03, halo=0.06, min_blob=12):
             if len(comp) < min_blob:
                 for p in comp:
                     seen[p] = True
+    # enclosed background (gaps between leaves, under stools): same colour as the outer background
+    if seen.any():
+        bgc = np.median(lab[seen], axis=0)
+        holes = (~seen) & (np.sqrt(((lab - bgc) ** 2).sum(-1)) < hole_tol)
+        seen |= holes
     return seen
 
 
@@ -219,6 +224,7 @@ def main():
     ap.add_argument("--bg", choices=["none", "auto", "grow"], default="none", help="auto: flat background from the corners; grow: soft gradient/vignette background")
     ap.add_argument("--halo", type=float, default=0.06, help="--bg grow: how different an edge pixel may be from the background and still be peeled")
     ap.add_argument("--peel-light", type=float, help="peel up to 2px of very light edge fringe (sticker outline) with OKLab lightness above this, e.g. 0.88")
+    ap.add_argument("--holes", type=float, default=0.0, help="--bg grow: also clear enclosed pixels this close (OKLab) to the background colour, e.g. 0.03")
     ap.add_argument("--keep-key", action="store_true", help="keep magenta as an opaque colour (window cutout mask)")
     ap.add_argument("--keep-noise", action="store_true")
     ap.add_argument("--name", help="output name, default = source file name")
@@ -255,7 +261,7 @@ def main():
     q = downscale(idx, opaque, out_w, out_h)
     if a.bg == "grow":
         small = np.array(Image.fromarray(rgb).resize((out_w, out_h), Image.Resampling.BOX))
-        q[grow_mask(small, halo=a.halo)] = -1
+        q[grow_mask(small, halo=a.halo, hole_tol=a.holes)] = -1
     if a.peel_light:
         full_pal = np.vstack([pal, np.array([key], dtype=np.uint8)])
         L = to_oklab(full_pal)[:, 0]

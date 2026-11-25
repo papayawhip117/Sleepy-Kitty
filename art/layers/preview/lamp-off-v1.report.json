@@ -9,11 +9,11 @@
   "top_colours": [
     [
       "h0020",
-      211
+      212
     ],
     [
       "h0018",
-      165
+      166
     ],
     [
       "h1114",
@@ -21,7 +21,7 @@
     ],
     [
       "h0021",
-      67
+      68
     ],
     [
       "h1115",
@@ -29,20 +29,20 @@
     ],
     [
       "h001",
-      46
+      50
     ],
     [
       "h002",
-      46
+      49
     ],
     [
       "h1113",
       44
     ]
   ],
-  "off_palette_share": 0.002,
+  "off_palette_share": 0.0,
   "dither_share_before_cleanup": 0.008,
   "lone_pixels_fixed": 6,
-  "transparent_share": 0.654,
+  "transparent_share": 0.649,
   "warnings": []
 }

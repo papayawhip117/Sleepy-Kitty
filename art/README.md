@@ -122,3 +122,8 @@ so it sits against the right side of the room.
   `lamp-off-v1` at a shared scale of 1/6 (`--box`, `--scale`, `--bg grow --peel-light 0.85` to drop the sticker-style
   cream outline). Mock: `mocks/room-mock-v2.png`. The room's own desk, shelf and lamp must be removed before the
   desk can sit there.
+- **windowseat-v1** (ChatGPT, cream): cut at scale 0.18 to 263x170. Its window panes show a painted sky, so it
+  needs a magenta-glass version before the game sky can show through. Cody does not want cat-shaped pillows/plushies
+  (the real kitty is the only cat): remove from bed and window seat.
+- **plants-v1** (ChatGPT sheet): four layers at scale 0.143 (`--holes 0.015` clears the background between leaves):
+  monstera, pothos on stool, hanging macrame, cat-face pot. Mock: `mocks/room-mock-v3.png`.

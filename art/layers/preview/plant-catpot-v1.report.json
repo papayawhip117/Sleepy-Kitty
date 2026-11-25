@@ -1,0 +1,48 @@
+{
+  "piece": "plant-catpot-v1",
+  "size": [
+    47,
+    44
+  ],
+  "source_px_per_pixel": 7.02,
+  "colours_used": 35,
+  "top_colours": [
+    [
+      "h016",
+      233
+    ],
+    [
+      "h020",
+      173
+    ],
+    [
+      "h011",
+      133
+    ],
+    [
+      "h0021",
+      99
+    ],
+    [
+      "h013",
+      91
+    ],
+    [
+      "h018",
+      89
+    ],
+    [
+      "h0023",
+      84
+    ],
+    [
+      "h0022",
+      56
+    ]
+  ],
+  "off_palette_share": 0.005,
+  "dither_share_before_cleanup": 0.012,
+  "lone_pixels_fixed": 11,
+  "transparent_share": 0.371,
+  "warnings": []
+}
