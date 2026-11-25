@@ -6,8 +6,8 @@ import { mix as mixHex, rgba } from './palette.js';
 // the vanishing point like a painting. Internal size is 480x270 (scaled up by whole numbers).
 //   u = left/right (-240..240), v = height (0 floor .. 270 ceiling), z = depth (0 front .. 1 back wall)
 export const W = 480, H = 270;
-const VPX = 240, VPY = 110, K = 0.667, EYE = 160;
-const S = (z) => 1 / (1 + K * z);
+const VPX = 240, VPY = 108, K = 0.667, EYE = 160, ZOOM = 1.07;
+const S = (z) => ZOOM / (1 + K * z);
 export const proj = (u, v, z) => { const s = S(z); return [VPX + u * s, VPY + (EYE - v) * s, s]; };
 
 // Glass area of the window on the back wall (where the sky/outside is drawn)
@@ -32,10 +32,10 @@ export const GLOWS = { lamp: [0, 0], laptop: [0, 0], bulbs: [] };
 const hx = (h) => [parseInt(h.slice(1, 3), 16), parseInt(h.slice(3, 5), 16), parseInt(h.slice(5, 7), 16)];
 const mc = (a, b, t) => [a[0] + (b[0] - a[0]) * t, a[1] + (b[1] - a[1]) * t, a[2] + (b[2] - a[2]) * t];
 const P = {
-  ink: hx('#2A2230'), night: hx('#302E3B'), slate: hx('#525871'), plum: hx('#61647C'), mauve: hx('#857C91'), blue: hx('#7C8DA6'), sky: hx('#89A2BA'), lilac: hx('#BEB3C3'),
-  rose: hx('#CD9FA0'), peach: hx('#F2C1A3'), gold: hx('#F8CCAA'), cream: hx('#F2E4DB'),
-  woodD: hx('#4A3540'), wood: hx('#6E4D52'), woodM: hx('#946B66'), woodL: hx('#BC8A78'),
-  leafD: hx('#34524F'), leaf: hx('#4F7A68'), leafL: hx('#86AA86'), pot: hx('#B9776A'),
+  ink: hx('#3A2E48'), night: hx('#4A4668'), slate: hx('#7A78A6'), plum: hx('#9A94C0'), mauve: hx('#B1A6CC'), blue: hx('#9DB4D8'), sky: hx('#A8C8E8'), lilac: hx('#DCD0EA'),
+  rose: hx('#F4AFBE'), peach: hx('#FFCFAE'), gold: hx('#FFE3BC'), cream: hx('#FFF2E6'),
+  woodD: hx('#7C5762'), wood: hx('#AD7C70'), woodM: hx('#D6A087'), woodL: hx('#F2C6A2'),
+  leafD: hx('#3E7A62'), leaf: hx('#5FB08A'), leafL: hx('#A8DCA0'), pot: hx('#EC9684'),
 };
 const lt = (c, t) => mc(c, [255, 243, 230], t), dk = (c, t) => mc(c, P.ink, t);
 const hex = (c) => '#' + c.map((v) => Math.max(0, Math.min(255, Math.round(v))).toString(16).padStart(2, '0')).join('');
@@ -49,7 +49,7 @@ const LV = 9; // brightness steps; ordered dithering blends between them for tha
 
 function lightAt(u, v, z) {
   const gx = u / 330, gy = (v - 125) / 210, gz = (z - 1) * 1.5;
-  return 0.74 + 0.5 * Math.exp(-(gx * gx * 1.1 + gy * gy + gz * gz * 0.8)) - 0.05 * (1 - z);
+  return 0.84 + 0.42 * Math.exp(-(gx * gx * 1.1 + gy * gy + gz * gz * 0.8)) - 0.04 * (1 - z);
 }
 function emit(x, y, c, u, v, z, fm) {
   const m = lightAt(u, v, z) * fm, q = Math.floor(m * LV + BAYER[((y & 3) << 2) | (x & 3)] / 16) / LV;
@@ -71,8 +71,8 @@ function paintU(u, z0, z1, v0, v1, fm, fn) {
   const xa = Math.max(0, Math.floor(Math.min(...corners.map((p) => p[0])))), xb = Math.min(W - 1, Math.ceil(Math.max(...corners.map((p) => p[0]))));
   const ya = Math.max(0, Math.floor(Math.min(...corners.map((p) => p[1])))), yb = Math.min(H - 1, Math.ceil(Math.max(...corners.map((p) => p[1]))));
   for (let y = ya; y <= yb; y++) for (let x = xa; x <= xb; x++) {
-    const s = (x + 0.5 - VPX) / u; if (s <= 0 || s > 1.001) continue;
-    const z = (1 / s - 1) / K, v = EYE - (y + 0.5 - VPY) / s;
+    const s = (x + 0.5 - VPX) / u; if (s <= 0 || s > ZOOM + 0.001) continue;
+    const z = (ZOOM / s - 1) / K, v = EYE - (y + 0.5 - VPY) / s;
     if (z < z0 || z > z1 || v < v0 || v > v1) continue;
     const c = fn(z, v); if (c) emit(x, y, c, u, v, z, fm);
   }
@@ -83,8 +83,8 @@ function paintV(v, u0, u1, z0, z1, fm, fn) {
   const xa = Math.max(0, Math.floor(Math.min(...corners.map((p) => p[0])))), xb = Math.min(W - 1, Math.ceil(Math.max(...corners.map((p) => p[0]))));
   const ya = Math.max(0, Math.floor(Math.min(...corners.map((p) => p[1])))), yb = Math.min(H - 1, Math.ceil(Math.max(...corners.map((p) => p[1]))));
   for (let y = ya; y <= yb; y++) for (let x = xa; x <= xb; x++) {
-    const s = (y + 0.5 - VPY) / (EYE - v); if (s <= 0 || s > 1.001) continue;
-    const z = (1 / s - 1) / K, u = (x + 0.5 - VPX) / s;
+    const s = (y + 0.5 - VPY) / (EYE - v); if (s <= 0 || s > ZOOM + 0.001) continue;
+    const z = (ZOOM / s - 1) / K, u = (x + 0.5 - VPX) / s;
     if (z < z0 || z > z1 || u < u0 || u > u1) continue;
     const c = fn(u, z); if (c) emit(x, y, c, u, v, z, fm);
   }
@@ -122,15 +122,28 @@ function plaster(a, v) {
   if (((a % 60) + 60) % 60 < 1.2) c = dk(c, 0.1);
   return c;
 }
+const RUG_PINK = hx('#F7B6C6'), RUG_PINK_L = hx('#FFD3DD'), RUG_PINK_D = hx('#EE93AB'), RUG_FACE = hx('#5B4466');
+// a cat-face rug: round head, two ears, sleepy eyes, rosy cheeks and a little nose
+function rugShade(u, z) {
+  const hu = u / 135, hz = (z - 0.45) / 0.26, head = Math.sqrt(hu * hu + hz * hz);
+  const earU = Math.abs(hu) - 0.62, inEar = hz > 0.5 && hz < 1.5 && Math.abs(earU) < (1.5 - hz) * 0.5 + 0.0;
+  if (head > 1 && !inEar) return undefined;
+  const edge = head > 0.92 || (inEar && head > 0.92 && false);
+  const noise = hash(u / 3, z * 90, 31) < 0.1;
+  if (inEar && head > 1) return Math.abs(earU) < (1.5 - hz) * 0.28 && hz < 1.3 ? RUG_PINK_D : lt(RUG_PINK_L, 0.2);
+  if (head > 0.9) return lt(P.cream, 0.0);
+  const eye = (sx) => { const du = (hu - sx) / 0.15, dz = (hz - 0.08) / 0.2; return du * du + dz * dz < 1; };
+  if (eye(-0.42) || eye(0.42)) { const dz = (hz - 0.08) / 0.2; return dz > -0.3 && dz < 0.55 && Math.abs((hu < 0 ? hu + 0.42 : hu - 0.42)) < 0.06 && dz > 0.15 ? lt(P.cream, 0) : RUG_FACE; }
+  if (Math.hypot((hu - 0.66) / 0.16, (hz + 0.18) / 0.14) < 1 || Math.hypot((hu + 0.66) / 0.16, (hz + 0.18) / 0.14) < 1) return hx('#FF8FA9');
+  if (Math.hypot(hu / 0.09, (hz + 0.12) / 0.07) < 1) return hx('#FF9AAE');
+  if (hz < -0.28 && hz > -0.4 && Math.abs(hu) < 0.16 && Math.abs(Math.abs(hu) - 0.08) < 0.07) return RUG_FACE;
+  if (Math.abs(hz + 0.12) < 0.05 && Math.abs(hu) > 0.7 && Math.abs(hu) < 0.88) return RUG_PINK_D; // whiskers
+  return noise ? RUG_PINK_L : (head > 0.8 ? RUG_PINK_L : RUG_PINK);
+}
 function floorShader(u, z) {
-  const ru = u / 150, rz = (z - 0.46) / 0.32, e = Math.sqrt(ru * ru + rz * rz);
-  if (e < 1) {
-    let c = P.slate;
-    if (e < 0.92) c = P.rose; if (e < 0.8) c = P.peach; if (e < 0.62) c = P.rose; if (e < 0.44) c = P.mauve; if (e < 0.24) c = P.peach;
-    if (e > 0.97) c = P.cream;
-    return hash(u / 2, z * 80, 8) < 0.12 ? lt(c, 0.15) : c;
-  }
-  if (e < 1.06) return dk(P.wood, 0.5);
+  const rg = rugShade(u, z); if (rg) return rg;
+  const e = Math.sqrt((u / 135) ** 2 + ((z - 0.45) / 0.26) ** 2);
+  if (e < 1.07) return dk(P.wood, 0.45);
   const idx = Math.floor((u + 240) / 34), f = (u + 240) - idx * 34;
   let c = mc(P.wood, P.woodM, hash(idx, 0, 5) * 0.55);
   if (f < 1.6) return dk(P.wood, 0.55);
@@ -166,7 +179,7 @@ export function buildRoom() {
   // 2. things that sit against the back wall, behind the furniture
   backDecor(rc);
   // 3. furniture (far to near) and shelves
-  sideShelves(); desk(); bed(); chair(); flush();
+  sideShelves(); corkboard(); desk(); bed(); chair(); flush();
   // 4. details on top of the furniture, then foreground plants and lights
   frontDecor(rc);
 }
@@ -239,6 +252,9 @@ function desk() {
   box(-240, -214, 152, 157, 0.22, 0.8, wood(P.woodM, 17));
   const rand = rng(21), cols = [P.rose, P.blue, P.peach, P.plum, P.leaf, P.cream, P.sky, P.pot];
   for (let z = 0.23; z < 0.5; z += 0.026) { const h = 14 + Math.floor(rand() * 12); box(-238, -224, 157, 157 + h, z, z + 0.022, solid(cols[Math.floor(rand() * cols.length)])); }
+}
+
+function corkboard() {
   // pinned corkboard + notes on the left wall
   paintU(-239.5, 0.3, 0.8, 104, 150, 1, (z, v) => {
     const a = (z - 0.3) / 0.5, b = (v - 104) / 46;
@@ -258,38 +274,40 @@ function chair() {
 }
 
 function bed() {
-  const x0 = 112, x1 = 240, z0 = 0.2, z1 = 0.86, qz0 = 0.3, qz1 = 0.8;
+  const x0 = 112, x1 = 240, z0 = 0.2, z1 = 0.86, qz0 = 0.23, qz1 = 0.855;
   box(x0, x1, 0, 112, z1, z1 + 0.03, wood(P.woodM, 23));                        // headboard
   box(x0, x1, 12, 36, z0, z1, wood(P.woodM, 22));                               // slim frame
   box(x0 + 4, x1 - 2, 0, 12, z0 + 0.01, z0 + 0.04, solid(P.woodD)); box(x0 + 4, x1 - 2, 0, 12, z1 - 0.04, z1 - 0.01, solid(P.woodD));
   box(x0 + 5, x1 - 4, 36, 60, z0 + 0.02, z1 - 0.02, solid(P.cream));            // mattress
-  const base = P.rose, qa = x0 + 1, qb = x1 - 1;
+  const base = P.rose, qa = x0 - 3, qb = x1 + 1;
   // rumpled top: soft fold light/dark, quilting stitches, puffy edges
-  paintV(70, qa, qb, qz0, qz1, 1.08, (u, z) => {
-    const zz = z * ZS, n = Math.sin(u * 0.075 + z * 7) * 0.5 + Math.sin(u * 0.16 - zz * 0.05 + 1.3) * 0.3 + Math.sin(zz * 0.09 + u * 0.03) * 0.25;
-    const ed = Math.min(u - qa, qb - u, zz - qz0 * ZS, qz1 * ZS - zz);
-    if (ed < 3.5) { const cx = Math.min(u - qa, qb - u), cz = Math.min(zz - qz0 * ZS, qz1 * ZS - zz); if (cx < 3.5 && cz < 3.5 && Math.hypot(3.5 - cx, 3.5 - cz) > 3.5) return null; }
-    let c = n > 0 ? lt(base, n * 0.3) : dk(base, -n * 0.28);
-    if (Math.abs(((u + zz * 0.7) % 36) - 18) < 0.8 || Math.abs(((u - zz * 0.7) % 36) - 18) < 0.8) c = dk(c, 0.1);
-    if (ed < 2) c = lt(c, 0.25);
-    return hash(u, zz, 14) < 0.04 ? lt(c, 0.12) : c;
+  paintV(70, qa, qb, qz0, qz1, 1.1, (u, z) => {
+    const zz = z * ZS, ed = Math.min(u - qa, qb - u, zz - qz0 * ZS, qz1 * ZS - zz);
+    if (ed < 4) { const cx = Math.min(u - qa, qb - u), cz = Math.min(zz - qz0 * ZS, qz1 * ZS - zz); if (cx < 4 && cz < 4 && Math.hypot(4 - cx, 4 - cz) > 4) return null; }
+    // puffy quilting: every cell is a soft pillow, light in the middle and creased at the seams
+    const cu = (((u - qa) % 26) + 26) % 26 / 26 - 0.5, cz2 = (((zz - qz0 * ZS) % 26) + 26) % 26 / 26 - 0.5, rr = Math.hypot(cu, cz2), puff = 0.5 - rr;
+    const n = Math.sin(u * 0.06 + z * 6) * 0.12 + puff * 1.2;
+    let c = n > 0.28 ? lt(base, 0.38) : n > 0.12 ? lt(base, 0.18) : n > 0 ? base : dk(base, 0.2);
+    if (rr > 0.6) c = dk(base, 0.3);
+    if (ed < 2.2) c = lt(c, 0.3);
+    return hash(u, zz, 14) < 0.035 ? lt(c, 0.2) : c;
   });
   // draped side (toward the room) with a wavy hem
   paintU(qa, qz0, qz1, 30, 70, 0.9, (z, v) => {
     const zz = z * ZS, hem = 44 + Math.sin(zz * 0.16) * 4 + Math.sin(zz * 0.07 + 1) * 3;
-    if (v < hem) return null; if (v < hem + 1.6) return dk(base, 0.5);
+    if (v < hem) return null; if (v < hem + 1.8) return lt(P.cream, 0.0);
     const f = 0.5 + 0.5 * Math.sin(zz * 0.19 + 0.6 * Math.sin(v * 0.2));
     return mc(lt(base, 0.08), dk(base, 0.45), f * 0.45 + (70 - v) / 90);
   });
   // draped foot end
   paintZ(qz0, qa, qb, 30, 70, 1, (u, v) => {
-    const hem = 42 + Math.sin(u * 0.13) * 4 + Math.sin(u * 0.05 + 2) * 3;
-    if (v < hem) return null; if (v < hem + 1.6) return dk(base, 0.5);
+    const hem = 40 + Math.abs(Math.sin(u * 0.1)) * 9;
+    if (v < hem) return null; if (v < hem + 1.8) return lt(P.cream, 0.0);
     const f = 0.5 + 0.5 * Math.sin(u * 0.2 + 0.5 * Math.sin(v * 0.25));
     return mc(lt(base, 0.05), dk(base, 0.4), f * 0.4 + (70 - v) / 100);
   });
   // folded throw at the foot of the bed
-  box(x0 + 6, x1 - 8, 70, 76, 0.32, 0.46, (f, p, q, A, B) => { const stripe = Math.floor(q / 6) % 2 ? P.peach : lt(P.peach, 0.2); return (f === 't' && p < 3) ? dk(P.peach, 0.2) : (f === 't' ? stripe : P.peach); });
+  box(x0 + 6, x1 - 8, 70, 77, 0.3, 0.44, (f, p, q, A, B) => { const stripe = Math.floor(q / 6) % 2 ? P.peach : lt(P.peach, 0.2); return (f === 't' && p < 3) ? dk(P.peach, 0.2) : (f === 't' ? stripe : P.peach); });
 }
 
 const SHELVES = [{ v: 150, z0: 0.3, z1: 0.82 }, { v: 190, z0: 0.3, z1: 0.82 }];
@@ -305,7 +323,7 @@ function sideShelves() {
 }
 
 // ── billboard details: plants, pillows, lights (drawn onto the room between furniture layers) ──
-const INK = hx('#1E3330');
+const INK = hx('#2C5148');
 function kit(c) {
   const col = (v) => (typeof v === 'string' ? v : hex(v));
   const R = (x, y, w, h, v) => { c.fillStyle = col(v); c.fillRect(Math.round(x), Math.round(y), Math.max(1, Math.round(w)), Math.max(1, Math.round(h))); };
@@ -335,7 +353,7 @@ function kit(c) {
     R(Math.round(x - w * 0.56), y - h, Math.round(w * 1.12), 1, INK); R(Math.round(x - w * 0.37), y - 1, Math.round(w * 0.74), 1, INK);
     R(Math.round(x - w * 0.5), y - h + 1, Math.round(w), 1, dk(P.woodD, 0.1));
   };
-  const GREENS = [[hx('#5E8F6E'), hx('#4F7A68'), hx('#86AA86')], [hx('#6FA070'), hx('#558A5E'), hx('#9CC48A')], [hx('#4F7A68'), hx('#3E6658'), hx('#7FA383')]];
+  const GREENS = [[hx('#8AD0A0'), hx('#5FB08A'), hx('#B8E8AC')], [hx('#94D69A'), hx('#6BBB82'), hx('#C4EDA8')], [hx('#74C096'), hx('#4F9E7E'), hx('#A6DCA4')]];
   const plant = (x, y, sc, kind, potCol, seed = 1) => {
     const rand = rng(seed), pw = 15 * sc, ph = 13 * sc, tones = GREENS[seed % 3];
     pot(x, y, pw, ph, potCol);
@@ -346,7 +364,16 @@ function kit(c) {
   };
   // vines that trail down from a pot (small paired leaves)
   const trail = (x, y, n, len, seed) => { const rand = rng(seed); for (let i = 0; i < n; i++) { const vx = x - 8 + (i / Math.max(1, n - 1)) * 16, vl = len * (0.5 + rand() * 0.6); R(vx, y, 1, vl, INK); for (let k = 3; k < vl; k += 4) { disc(vx - 1, y + k, 1.4, k % 8 < 4 ? P.leaf : P.leafL); disc(vx + 2, y + k + 2, 1.4, P.leaf); } } };
-  const pillow = (u, v, z, v0, sc) => { const [x, y, s] = proj(u, v, z), rx = 24 * s * sc, ry = 11 * s * sc; ell(x, y + 2 * s, rx + 1, ry + 1, INK); ell(x, y, rx, ry, v0); ell(x - 4 * s, y - 3 * s, rx * 0.65, ry * 0.5, lt(v0, 0.4)); R(x - rx * 0.5, y + ry * 0.35, rx * 0.9, 1, dk(v0, 0.2)); R(x + rx * 0.3, y - ry * 0.2, 1, ry * 0.7, dk(v0, 0.15)); };
+  const pillow = (u, v, z, v0, sc) => {
+    const [x, y, s] = proj(u, v, z), rx = 29 * s * sc, ry = 14 * s * sc, out = dk(v0, 0.5);
+    const lobes = [[x, y, rx, ry], [x - rx * 0.72, y - ry * 0.05, rx * 0.34, ry * 0.9], [x + rx * 0.72, y - ry * 0.05, rx * 0.34, ry * 0.9]];
+    lobes.forEach(([lx, ly, a, b]) => ell(lx, ly + 1.5, a + 1.4, b + 1.4, out));
+    lobes.forEach(([lx, ly, a, b]) => ell(lx, ly, a, b, v0));
+    ell(x, y + ry * 0.45, rx * 0.9, ry * 0.45, dk(v0, 0.14));
+    ell(x - rx * 0.12, y - ry * 0.32, rx * 0.6, ry * 0.42, lt(v0, 0.38));
+    R(x - rx * 0.28, y - ry * 0.05, rx * 0.56, 1, dk(v0, 0.22)); R(x - 1, y - ry * 0.45, 2, ry * 0.5, dk(v0, 0.16));
+    for (let i = 0; i < 6; i++) R(x - rx + hash(i, 3, 5) * rx * 2, y - ry * 0.9 + hash(i, 4, 5) * ry * 1.8, 1, 1, lt(v0, 0.5));
+  };
   return { R, disc, ell, leaf, pot, plant, trail, pillow };
 }
 
@@ -366,7 +393,7 @@ function backDecor(c) {
   // tall plant in the back-left corner, standing clear of the desk
   { const [x, y, s] = proj(-212, 0, 0.95); k.plant(x, y, s * 1.5, 'bird', P.rose, 5); }
 }
-const GREENS_BACK = [[hx('#5E8F6E'), hx('#4F7A68'), hx('#86AA86')], [hx('#6FA070'), hx('#558A5E'), hx('#9CC48A')], [hx('#4F7A68'), hx('#3E6658'), hx('#7FA383')]];
+const GREENS_BACK = [[hx('#8AD0A0'), hx('#5FB08A'), hx('#B8E8AC')], [hx('#94D69A'), hx('#6BBB82'), hx('#C4EDA8')], [hx('#74C096'), hx('#4F9E7E'), hx('#A6DCA4')]];
 
 function frontDecor(c) {
   const k = kit(c), { R, disc, ell } = k;
@@ -379,7 +406,7 @@ function frontDecor(c) {
   // plant on the desk, by the laptop
   { const [x, y, s] = proj(-190, 92, 0.36); k.plant(x, y, s * 0.55, 'fiddle', P.cream, 3); }
   // pillows + plush on the bed
-  k.pillow(168, 76, 0.8, P.cream, 1.25); k.pillow(212, 80, 0.81, P.peach, 1.1);
+  k.pillow(176, 78, 0.82, P.cream, 1.3); k.pillow(204, 84, 0.84, P.lilac, 1.15);
   { const [x, y, s] = proj(138, 72, 0.42), q = s * 1.4; ell(x, y - 6 * q, 8 * q, 7 * q, INK); ell(x, y - 6 * q, 7 * q, 6 * q, P.woodM); ell(x - 1, y - 7 * q, 4 * q, 4 * q, P.woodL); disc(x - 5 * q, y - 12 * q, 3 * q, P.woodM); disc(x + 5 * q, y - 12 * q, 3 * q, P.woodM); R(x - 2 * q, y - 10 * q, 1, 1, INK); R(x + 2 * q, y - 10 * q, 1, 1, INK); }
   // desk lamp (articulated)
   { const [x, y, s] = proj(-208, 92, 0.76), q = s * 1.5; c.strokeStyle = hex(P.slate); c.lineWidth = Math.max(2, 2.5 * q);
@@ -400,9 +427,9 @@ function frontDecor(c) {
 
 // ── DYNAMIC: what's outside the window ──────────────────────────────────
 const LEAVES = {
-  spring: ['#34524F', '#5E8F6E', '#A6C98A'],
-  summer: ['#2C4A47', '#4F7A68', '#86AA86'],
-  autumn: ['#7E3A33', '#C0703F', '#E8A857'],
+  spring: ['#4E9A74', '#7FCB8C', '#C4F0A8'],
+  summer: ['#3E8A62', '#62B27A', '#B4E6A0'],
+  autumn: ['#C0583C', '#EE9A4C', '#FFD27A'],
 };
 const treeCache = {};
 function trees(season) {
@@ -412,28 +439,37 @@ function trees(season) {
   const R = (x, y, w, h, c) => { t.fillStyle = c; t.fillRect(Math.round(x), Math.round(y), w, h); };
   const disc = (cx, cy, rad, c) => { t.fillStyle = c; for (let dy = -rad; dy <= rad; dy++) { const w = Math.floor(Math.sqrt(rad * rad - dy * dy + 0.5)); t.fillRect(Math.round(cx - w), Math.round(cy + dy), w * 2 + 1, 1); } };
   const line = (x0, y0, x1, y1, c, th = 1) => { t.fillStyle = c; const n = Math.max(Math.abs(x1 - x0), Math.abs(y1 - y0)) || 1; for (let i = 0; i <= n; i++) t.fillRect(Math.round(x0 + ((x1 - x0) * i) / n), Math.round(y0 + ((y1 - y0) * i) / n), th, th); };
-  const trunk = (x, base, top, w, lean, seed) => {
-    for (let y = top; y <= base; y++) { const off = Math.round(((base - y) / (base - top)) * lean); R(x + off, y, w, 1, '#3A2C38'); R(x + off, y, 1, 1, '#5A4350'); }
-    const rand = rng(seed), n = season === 'winter' ? 6 : 3;
-    for (let i = 0; i < n; i++) { const by = top + 3 + i * ((base - top) * 0.55 / n), dir = i % 2 ? 1 : -1, len = 10 + rand() * 16; line(x + w / 2, by, x + w / 2 + dir * len, by - len * 0.6, '#3A2C38', 2); if (season === 'winter') { line(x + w / 2 + dir * len, by - len * 0.6, x + w / 2 + dir * (len + 7), by - len * 0.6 - 6, '#3A2C38'); R(x + w / 2 + dir * len - 2, by - len * 0.6 - 2, 6, 2, '#E8EEF4'); } }
-    if (season === 'winter') R(x - 1, top - 1, w + 2, 2, '#E8EEF4');
-  };
-  const crown = (cx, cy, rx, ry, seed) => {
-    if (season === 'winter') return;
-    const [dkc, mdc, ltc] = LEAVES[season], rand = rng(seed), blobs = [];
-    for (let i = 0; i < 22; i++) { const a = rand() * 6.28, dd = Math.sqrt(rand()); blobs.push([cx + Math.cos(a) * dd * rx, cy + Math.sin(a) * dd * ry, 6 + rand() * 7]); }
-    blobs.forEach(([x, y, r]) => disc(x, y + 3, Math.round(r), '#1E3330'));
-    blobs.forEach(([x, y, r]) => disc(x, y + 2, Math.round(r) - 1, dkc));
-    for (let i = 0; i < 6; i++) { const bx = cx + (rand() - 0.5) * rx, by = cy + 6 + rand() * ry * 0.7; line(cx, cy + ry, bx, by, '#5A4350', 2); }
+  const BARK = '#6B4A52', BARK_L = '#9A6E68', OUT = season === 'autumn' ? '#7A3A32' : '#2C5148';
+  // a whole tree: flared trunk that forks into branches, then a round scalloped crown (or bare forks in winter)
+  const tree = (cx, baseY, trunkH, tw, rx, ry, seed) => {
+    const rand = rng(seed), topY = baseY - trunkH;
+    for (let y = topY; y <= baseY; y++) { const k = (y - topY) / trunkH, w = Math.round(tw * (0.75 + 0.25 * k) + (k > 0.85 ? (k - 0.85) * tw * 1.6 : 0)); R(cx - w / 2 - 1, y, w + 2, 1, '#3A2C38'); R(cx - w / 2, y, w, 1, BARK); R(cx - w / 2, y, 2, 1, BARK_L); if (hash(y, cx, 2) < 0.3) R(cx + w / 4, y, 1, 2, '#8A5F5E'); }
+    const fork = (x, y, ang, len, depth) => {
+      const x1 = x + Math.cos(ang) * len, y1 = y + Math.sin(ang) * len;
+      line(x, y, x1, y1, '#3A2C38', depth > 1 ? 4 : 3); line(x, y, x1, y1, BARK, depth > 1 ? 2 : 1);
+      if (depth > 0) { fork(x1, y1, ang - 0.55 - rand() * 0.2, len * 0.72, depth - 1); fork(x1, y1, ang + 0.55 + rand() * 0.2, len * 0.72, depth - 1); }
+    };
+    if (season === 'winter') {
+      fork(cx, topY + 2, -Math.PI / 2 - 0.7, 20, 3); fork(cx, topY + 2, -Math.PI / 2 + 0.7, 20, 3); fork(cx, topY + 6, -Math.PI / 2, 22, 3);
+      for (let i = 0; i < 9; i++) R(cx - rx * 0.8 + i * rx * 0.2, topY - ry * 0.6 - (i % 3) * 7, 5, 2, '#EAF1F7'); R(cx - tw / 2 - 1, topY - 1, tw + 3, 2, '#EAF1F7');
+      return;
+    }
+    fork(cx, topY + 6, -Math.PI / 2 - 0.9, 14, 1); fork(cx, topY + 6, -Math.PI / 2 + 0.9, 14, 1);
+    const [dkc, mdc, ltc] = LEAVES[season], cy = topY - ry * 0.25, blobs = [];
+    [{ y: 0.5, n: 7, r: 10 }, { y: 0.0, n: 6, r: 12 }, { y: -0.5, n: 5, r: 11 }, { y: -0.85, n: 3, r: 9 }].forEach(({ y, n, r }) => {
+      const half = rx * (1 - Math.abs(y) * 0.28);
+      for (let i = 0; i < n; i++) blobs.push([cx - half + (i + 0.5) * (2 * half / n) + (rand() - 0.5) * 4, cy + y * ry + (rand() - 0.5) * 4, r + rand() * 3]);
+    });
+    blobs.forEach(([x, y, r]) => disc(x, y + 2, Math.round(r) + 1, OUT));
+    blobs.forEach(([x, y, r]) => disc(x, y + 2, Math.round(r), dkc));
     blobs.forEach(([x, y, r]) => disc(x, y, Math.round(r) - 1, mdc));
-    blobs.forEach(([x, y, r]) => { disc(x - 2, y - 3, Math.round(r * 0.55), ltc); });
-    for (let i = 0; i < 140; i++) { const a = rand() * 6.28, dd = 0.7 + rand() * 0.5, x = cx + Math.cos(a) * rx * dd, y = cy + Math.sin(a) * ry * dd; R(x, y, 2, 2, rand() > 0.55 ? ltc : (a < 3.3 && a > 0.3 ? dkc : mdc)); }
-    t.fillStyle = '#F6F3B8'; for (let i = 0; i < 12; i++) t.fillRect(Math.round(cx + (rand() - 0.5) * rx * 1.5), Math.round(cy + (rand() - 0.7) * ry * 1.2), 2, 2); // sunlit sparkles
-    t.globalCompositeOperation = 'destination-out'; for (let i = 0; i < 10; i++) t.fillRect(Math.round(cx + (rand() - 0.5) * rx * 1.4), Math.round(cy + (rand() - 0.3) * ry * 1.2), 2, 2); t.globalCompositeOperation = 'source-over'; // little gaps where the sky peeks through
-    if (season === 'spring') for (let i = 0; i < 50; i++) { const a = rand() * 6.28, dd = Math.sqrt(rand()); R(cx + Math.cos(a) * dd * rx, cy + Math.sin(a) * dd * ry, 2, 2, rand() > 0.5 ? '#F2C1A3' : '#F8E0D0'); }
+    blobs.forEach(([x, y, r]) => disc(x - 2, y - 3, Math.max(2, Math.round(r * 0.55)), ltc));
+    for (let i = 0; i < 40; i++) { const [x, y, r] = blobs[Math.floor(rand() * blobs.length)]; R(x + (rand() - 0.5) * r, y + (rand() - 0.2) * r, 2, 2, rand() > 0.5 ? dkc : ltc); }
+    t.fillStyle = '#FFFBC8'; for (let i = 0; i < 10; i++) { const [x, y, r] = blobs[Math.floor(rand() * blobs.length)]; t.fillRect(Math.round(x - r * 0.3), Math.round(y - r * 0.5), 2, 2); }
+    if (season === 'spring') for (let i = 0; i < 40; i++) { const [x, y, r] = blobs[Math.floor(rand() * blobs.length)]; R(x + (rand() - 0.5) * r * 1.4, y + (rand() - 0.5) * r * 1.4, 2, 2, rand() > 0.5 ? '#FFC8D6' : '#FFF0F4'); }
   };
-  trunk(g.w - 42, g.h + 4, 20, 11, -4, 11); crown(g.w - 44, 34, 38, 28, 11);
-  trunk(8, g.h + 4, 60, 5, 2, 5); crown(12, 66, 20, 14, 5);
+  tree(g.w - 52, g.h + 2, 46, 12, 42, 26, 11);
+  tree(22, g.h + 2, 20, 7, 20, 12, 5);
   return (treeCache[season] = cv);
 }
 
