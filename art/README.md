@@ -127,3 +127,7 @@ so it sits against the right side of the room.
   (the real kitty is the only cat): remove from bed and window seat.
 - **plants-v1** (ChatGPT sheet): four layers at scale 0.143 (`--holes 0.015` clears the background between leaves):
   monstera, pothos on stool, hanging macrame, cat-face pot. Mock: `mocks/room-mock-v3.png`.
+- **shelves-v1** (ChatGPT, cream): one 142x99 layer at scale 0.1. The pink painted wall shadow is turned into a
+  translucent plum shadow (`--shadow "#F3BABB"`), so it works on any wall. Lantern and candle glow anchors are in
+  `layers/shelves-v1.glow.json`. Kept as one layer; the plants are too tangled with the books to sway separately.
+  Cody chose to keep room-base's big window, so windowseat-v1 is dropped.
