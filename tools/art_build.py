@@ -32,7 +32,7 @@ shutil.copy(SRC / "sunbeams-v1.png", OUT / "sunbeams.png")
 
 # ---- furniture layers (Stage 2) ----
 from PIL import ImageOps
-desk = Image.open(SRC / "desk-v1.png").convert("RGBA")
+desk = Image.open(SRC / "desk-v2.png").convert("RGBA")
 import colorsys
 da = np.array(desk)
 for y in range(desk.height):
@@ -53,5 +53,5 @@ desk = Image.fromarray(da)
 body = desk.crop((0, 41, desk.width, desk.height))          # below the wall shelf, which is placed separately
 body = ImageOps.mirror(body)                                 # lamp ends up on the left, clear of the window
 body.save(OUT / "desk-body.png")
-shutil.copy(SRC / "bed-v2.png", OUT / "bed.png")
-shutil.copy(SRC / "rug-v2.png", OUT / "rug.png")
+shutil.copy(SRC / "bed-v3.png", OUT / "bed.png")
+shutil.copy(SRC / "rug-v3.png", OUT / "rug.png")

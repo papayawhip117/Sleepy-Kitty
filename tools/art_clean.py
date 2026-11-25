@@ -226,6 +226,7 @@ def main():
     ap.add_argument("--peel-light", type=float, help="peel up to 2px of very light edge fringe (sticker outline) with OKLab lightness above this, e.g. 0.88")
     ap.add_argument("--holes", type=float, default=0.0, help="--bg grow: also clear enclosed pixels this close (OKLab) to the background colour, e.g. 0.03")
     ap.add_argument("--shadow", help="hex colour of a painted wall shadow; those pixels become a soft translucent shadow that works on any wall")
+    ap.add_argument("--smooth", action="store_true", help="area-average downscale (smoother, finer detail) instead of block-mode; colours are still snapped to the palette")
     ap.add_argument("--keep-key", action="store_true", help="keep magenta as an opaque colour (window cutout mask)")
     ap.add_argument("--keep-noise", action="store_true")
     ap.add_argument("--name", help="output name, default = source file name")
@@ -259,7 +260,18 @@ def main():
 
     out_w = a.width or max(1, round(img.size[0] * a.scale))
     out_h = a.height or round(img.size[1] * out_w / img.size[0])
-    q = downscale(idx, opaque, out_w, out_h)
+    if a.smooth:
+        # average the source colours per output pixel (keeps fine detail and soft shading), then snap to the palette
+        avg = np.array(Image.fromarray(rgb).resize((out_w, out_h), Image.Resampling.BOX))
+        ai, _ad = nearest(to_oklab(avg.reshape(-1, 3).astype(float)), lab_pal)
+        q = ai.reshape(out_h, out_w).astype(np.int32)
+        cov = np.array(Image.fromarray((opaque * 255).astype(np.uint8)).resize((out_w, out_h), Image.Resampling.BOX)) > 127
+        q[~cov] = -1
+        if a.keep_key:
+            kk = np.array(Image.fromarray((is_key * 255).astype(np.uint8)).resize((out_w, out_h), Image.Resampling.BOX)) > 127
+            q[kk & cov] = key_i
+    else:
+        q = downscale(idx, opaque, out_w, out_h)
     if a.bg == "grow":
         small = np.array(Image.fromarray(rgb).resize((out_w, out_h), Image.Resampling.BOX))
         q[grow_mask(small, halo=a.halo, hole_tol=a.holes)] = -1

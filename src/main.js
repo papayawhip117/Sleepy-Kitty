@@ -77,9 +77,9 @@ function drawSky() {
 
 // ---- layout (480x270 room pixels). Floor starts at y=234 (baseboard ends), back wall spans x=37..439. ----
 const LAYOUT = {
-  rug:  { img: rugImg,  x: 180, y: 234 },   // centred under the window, lies flat on the floor
+  rug:  { img: rugImg,  x: 118, y: 234 },   // centred under the window, lies flat on the floor
   desk: { img: deskImg, x: 40,  y: 140 },   // against the left wall; feet land at y~248, inside the floor band
-  bed:  { img: bedImg,  x: 292, y: 158 },   // against the right wall; skirt bottom at y~262
+  bed:  { img: bedImg,  x: 250, y: 136 },   // against the right wall; skirt bottom at y~262
 };
 
 // ---- viewport ----
