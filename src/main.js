@@ -79,7 +79,7 @@ function drawSky() {
 const LAYOUT = {
   rug:  { img: rugImg,  x: 118, y: 234 },   // centred under the window, lies flat on the floor
   desk: { img: deskImg, x: 40,  y: 140 },   // against the left wall; feet land at y~248, inside the floor band
-  bed:  { img: bedImg,  x: 250, y: 136 },   // against the right wall; skirt bottom at y~262
+  bed:  { img: bedImg,  x: 303, y: 136 },   // pushed into the right corner: the corner is hidden behind the bed (and the frame edge)
 };
 
 // ---- viewport ----
