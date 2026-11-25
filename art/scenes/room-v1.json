@@ -1,0 +1,15 @@
+{
+  "room": "room-shell-v1",
+  "items": [
+    {"layer": "rug-v1", "at": [128, 212]},
+    {"layer": "plant-monstera-v1", "at": [118, 136]},
+    {"layer": "desk-v1", "at": [-4, 101]},
+    {"layer": "shelves-v1", "at": [338, 26]},
+    {"layer": "plant-catpot-v1", "at": [300, 146]},
+    {"layer": "plant-hanging-v1", "at": [150, -6]},
+    {"layer": "bed-v2", "at": [324, 161]},
+    {"kitty": ["sleep", 3], "at": [344, 183]},
+    {"kitty": ["blink", 0], "at": [205, 192]},
+    {"kitty": ["stretch", 4], "at": [240, 132]}
+  ]
+}
