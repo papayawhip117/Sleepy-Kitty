@@ -111,3 +111,10 @@ sit on top.
 **Must have:** the duvet reads as soft and heavy (rounded lumps, visible folds), not a box;
 a flat-ish area on top of the duvet where the kitty can curl up; the headboard on the right
 so it sits against the right side of the room.
+
+## Log
+
+- **room-base-v1** (ChatGPT): passed. A full furnished room, not an empty shell. The palette was extracted from it.
+- **bed-v1** (ChatGPT, on a dark vignette): passed after `--bg grow` cleanup at width 160. 10 of its colours were added
+  to the palette (lavender and pinks the warm room lacked). Mock: `mocks/bed-in-room-v1.png`. It needs the room's
+  right-side bookshelf, plant and cat cushion removed before it can sit there for real.

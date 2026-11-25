@@ -1,20 +1,67 @@
 {
   "name": "Window Kitty",
-  "note": "Ramps go dark to light. Shadows lean plum/violet, highlights lean cream. Every asset is snapped to these colors by tools/art_clean.py.",
+  "note": "Extracted from room-base-v1.png. Every piece is snapped to these colours.",
   "key": "#FF00FF",
   "ramps": {
-    "blush":    ["#C9707F", "#E8909E", "#FFB3C1", "#FFD6DC"],
-    "coral":    ["#C2584F", "#FF8A78", "#FFB09E"],
-    "peach":    ["#E0956A", "#FFC59A", "#FFE0C4"],
-    "butter":   ["#E8B24F", "#FFE08A", "#FFF3BE"],
-    "cream":    ["#EFDCC4", "#FFF3DE", "#FFFBF2"],
-    "lavender": ["#7E6BB8", "#9E88D2", "#B9A3E8", "#D9CCF5"],
-    "sky":      ["#6BA4CF", "#9ED0F0", "#CDEBFA"],
-    "sage":     ["#5F8F62", "#8FBF8A", "#BEDDB0"],
-    "leaf":     ["#1F6F54", "#2E8A5C", "#3FA66B", "#6CC47E"],
-    "wood":     ["#4A2A22", "#6B4030", "#8A5A3C", "#B07A4E", "#D2A06A"],
-    "plum":     ["#3A2350", "#5A3A5E", "#7A5677"],
-    "night":    ["#141B3D", "#2B2F6B", "#5B4B9A", "#1B5E5A"],
-    "glow":     ["#E08A2E", "#FFB347", "#FFD98A", "#FF9AAE", "#F4F1FF"]
+    "grey": [
+      "#403F43",
+      "#524F45"
+    ],
+    "h00": [
+      "#876350",
+      "#964D4D",
+      "#9D514F",
+      "#A5554F",
+      "#AD584E",
+      "#B55C4D",
+      "#BE604D",
+      "#C6654F",
+      "#B77263",
+      "#D16A4F",
+      "#DD7351",
+      "#C47A77",
+      "#D17E6D",
+      "#DC6D68",
+      "#ED7D63",
+      "#D7887A",
+      "#E18C74",
+      "#F49868",
+      "#E3978E",
+      "#F9B47E",
+      "#EEA48E"
+    ],
+    "h01": [
+      "#635A46",
+      "#736845",
+      "#897445",
+      "#A18147",
+      "#C1924D",
+      "#FCD290"
+    ],
+    "h09": [
+      "#684E6E"
+    ],
+    "h10": [
+      "#81526D",
+      "#C632A2",
+      "#96627D"
+    ],
+    "h11": [
+      "#5B3744",
+      "#683D49",
+      "#74404B",
+      "#7A434C",
+      "#83464B",
+      "#8C4A4C",
+      "#8E596F",
+      "#A7646D",
+      "#A86D83",
+      "#C25F6C",
+      "#B6727C",
+      "#BA798A",
+      "#CF718D",
+      "#CD8486",
+      "#E17A89"
+    ]
   }
 }
