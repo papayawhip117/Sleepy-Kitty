@@ -133,3 +133,7 @@ so it sits against the right side of the room.
   Cody chose to keep room-base's big window, so windowseat-v1 is dropped.
 - **rug-v1** (ChatGPT, top-down): squashed to 200x56 to lie flat in the room's floor perspective. Replaces the
   painted rug, which goes away in the room-shell edit. Mock: `mocks/room-mock-v5.png`.
+- **kitty-sheet-v1** (ChatGPT, labelled rows): sliced with `tools/art_sprites.py` at scale 0.25 into
+  `layers/kitty-sheet.png` with 53x58 cells: sleep 4, blink 5, stretch 5, walk 6 (faces right, mirrored in code),
+  held 4 (top-anchored). Frame info is in `layers/kitty-sheet.json`. At 0.17 the face was lost, so the kitty is
+  chibi-sized (about 45px long asleep). Mock: `mocks/room-mock-v6.png`.
