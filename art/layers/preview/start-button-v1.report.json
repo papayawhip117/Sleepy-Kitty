@@ -1,0 +1,48 @@
+{
+  "piece": "start-button-v1",
+  "size": [
+    82,
+    23
+  ],
+  "source_px_per_pixel": 3.0,
+  "colours_used": 32,
+  "top_colours": [
+    [
+      "h0050",
+      524
+    ],
+    [
+      "h0051",
+      509
+    ],
+    [
+      "h0049",
+      155
+    ],
+    [
+      "h0113",
+      67
+    ],
+    [
+      "h114",
+      66
+    ],
+    [
+      "h112",
+      65
+    ],
+    [
+      "h0110",
+      32
+    ],
+    [
+      "h113",
+      20
+    ]
+  ],
+  "off_palette_share": 0.001,
+  "dither_share_before_cleanup": 0.003,
+  "lone_pixels_fixed": 4,
+  "transparent_share": 0.17,
+  "warnings": []
+}

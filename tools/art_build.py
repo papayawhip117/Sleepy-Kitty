@@ -93,3 +93,7 @@ for _ in range(4):                                           # peel the pale bac
 ka = tidy(ka, min_island=10, spur_passes=0)                  # keep whiskers; drop stray specks
 Image.fromarray(ka).save(OUT / "kitty.png")
 shutil.copy(SRC / "kitty-sheet-2x-sheet.json", OUT / "kitty.json")
+
+# ---- start page art (Cody's own title art, cut from his screenshot; shown at a whole-number scale, never resampled) ----
+shutil.copy(SRC / "start-logo-v2.png", OUT / "start-logo.png")
+shutil.copy(SRC / "start-button-v2.png", OUT / "start-button.png")

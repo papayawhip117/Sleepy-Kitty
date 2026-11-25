@@ -14,13 +14,25 @@ export function initStart(api) {
 
   const chip = (group, id, label, on) => `<button type="button" class="chip${on ? ' on' : ''}" data-group="${group}" data-id="${id}" aria-pressed="${on}">${label}</button>`;
   function render(first) {
+    if (first) {                                   // title screen: cream page, logo, start button (Cody's art)
+      root.className = 'title';
+      root.innerHTML = `
+        <div class="titlebox">
+          <img class="logo" src="./art/start-logo.png" alt="Sleepy Kitty" width="209" height="169" />
+          <button type="button" class="startbtn" id="go" aria-label="Start"><img src="./art/start-button.png" alt="" width="234" height="60" /></button>
+        </div>`;
+      root.querySelector('#go').addEventListener('click', hide);
+      root.querySelector('#go').focus();
+      return;
+    }
+    root.className = 'panel';
     root.innerHTML = `
-      <div class="card" role="dialog" aria-label="Window Kitty">
-        <h1>Window Kitty</h1>
+      <div class="card" role="dialog" aria-label="Settings">
+        <h1>Settings</h1>
         <p class="sub">a cozy little room with a sleepy kitty</p>
         <div class="group"><span class="label">Time of day</span><div class="chips">${TIMES.map((t) => chip('time', t[0], t[1], st.time === t[0])).join('')}</div></div>
         <div class="group"><span class="label">Weather</span><div class="chips">${WEATHERS.map((w) => chip('weather', w[0], w[1], st.weather === w[0])).join('')}</div></div>
-        <button type="button" class="go" id="go">${first ? 'Start' : 'Back to the room'}</button>
+        <button type="button" class="go" id="go">Back to the room</button>
         <p class="hint">Tap the kitty to pet her. Drag her to pick her up. Click the lamp to switch it. Click the window to change the weather.</p>
       </div>`;
     root.querySelectorAll('.chip').forEach((b) => b.addEventListener('click', () => {
