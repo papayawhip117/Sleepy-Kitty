@@ -1,0 +1,50 @@
+{
+  "piece": "shell-twilight-v1",
+  "size": [
+    480,
+    270
+  ],
+  "source_px_per_pixel": 3.48,
+  "colours_used": 31,
+  "top_colours": [
+    [
+      "h102",
+      43571
+    ],
+    [
+      "key",
+      32406
+    ],
+    [
+      "h100",
+      10235
+    ],
+    [
+      "h090",
+      10176
+    ],
+    [
+      "h110",
+      9202
+    ],
+    [
+      "grey0",
+      5475
+    ],
+    [
+      "h111",
+      4316
+    ],
+    [
+      "h118",
+      3895
+    ]
+  ],
+  "off_palette_share": 0.516,
+  "dither_share_before_cleanup": 0.003,
+  "lone_pixels_fixed": 403,
+  "transparent_share": 0.0,
+  "warnings": [
+    "Many source colours are far from the palette; the piece will look recoloured. Regenerate with the palette in the prompt."
+  ]
+}

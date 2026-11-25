@@ -1,48 +1,48 @@
 {
   "piece": "scenery-day-v1",
   "size": [
-    225,
+    223,
     137
   ],
-  "source_px_per_pixel": 7.05,
-  "colours_used": 46,
+  "source_px_per_pixel": 7.11,
+  "colours_used": 47,
   "top_colours": [
     [
       "h016",
-      3211
+      3198
     ],
     [
       "h051",
-      2635
+      2605
     ],
     [
       "h062",
-      2278
+      2359
     ],
     [
       "h020",
-      2142
+      2131
     ],
     [
       "h052",
-      1896
-    ],
-    [
-      "h063",
-      1746
+      1879
     ],
     [
       "h050",
-      1723
+      1707
+    ],
+    [
+      "h063",
+      1698
     ],
     [
       "h0111",
-      1704
+      1670
     ]
   ],
   "off_palette_share": 0.018,
-  "dither_share_before_cleanup": 0.007,
-  "lone_pixels_fixed": 198,
+  "dither_share_before_cleanup": 0.006,
+  "lone_pixels_fixed": 192,
   "transparent_share": 0.0,
   "warnings": []
 }
