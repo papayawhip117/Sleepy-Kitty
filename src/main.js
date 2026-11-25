@@ -11,7 +11,7 @@ const buf = document.createElement('canvas'); buf.width = W * K; buf.height = H 
 const b = buf.getContext('2d'); b.imageSmoothingEnabled = false;
 
 const load = (src) => new Promise((res, rej) => { const i = new Image(); i.onload = () => res(i); i.onerror = rej; i.src = src; });
-const [shell, scenery, sunbeams, deskImg, bedImg, rugImg, shelvesImg, hangImg, kittyImg, scene, shelfGlow, kittyMeta] = await Promise.all([load('./art/room-shell.png'), load('./art/scenery-day.png'), load('./art/sunbeams.png'), load('./art/desk-body.png'), load('./art/bed.png'), load('./art/rug.png'), load('./art/shelves.png'), load('./art/plant-hanging.png'), load('./art/kitty.png'), fetch('./art/scene.json').then((r) => r.json()), fetch('./art/shelves.glow.json').then((r) => r.json()), fetch('./art/kitty.json').then((r) => r.json())]);
+const [shell, scenery, sunbeams, deskImg, bedImg, rugImg, shelvesImg, hangImg, kittyImg, curtainImg, rodImg, scene, shelfGlow, kittyMeta, curtainMeta] = await Promise.all([load('./art/room-shell.png'), load('./art/scenery-day.png'), load('./art/sunbeams.png'), load('./art/desk-body.png'), load('./art/bed.png'), load('./art/rug.png'), load('./art/shelves.png'), load('./art/plant-hanging.png'), load('./art/kitty.png'), load('./art/curtains.png'), load('./art/curtains-rod.png'), fetch('./art/scene.json').then((r) => r.json()), fetch('./art/shelves.glow.json').then((r) => r.json()), fetch('./art/kitty.json').then((r) => r.json()), fetch('./art/curtains.json').then((r) => r.json())]);
 const [wx0, wy0, wx1, wy1] = scene.window;
 // Where the kitty may go (feet positions, room units). Floor band is y 234-270; the desk stands on the left and the bed
 // fills the right, so she walks the open middle freely and only in front of the bed on the right.
@@ -199,6 +199,22 @@ function resize() {
 }
 addEventListener('resize', resize); visualViewport?.addEventListener('resize', resize); resize();
 
+// Curtains: 8 hand-drawn sway frames per panel. Each panel runs its own slow, slightly irregular wave, so the left and
+// right sides never move in lockstep. One art pixel = one room pixel (no resampling), hung from a static rod across the glass.
+const CURT = { x0: 112, y: 42, xr: 211, rodX: 112, rodW: 260 };   // panels hang over the window frame's side bars, so they cover as little glass as possible
+function curtainFrame(t, rate, phase) {
+  const gust = 0.65 + 0.35 * Math.sin(t * 0.11 + phase * 1.7);          // slow drift in strength
+  const p = 0.5 + 0.5 * Math.sin(t * rate + phase) * gust;
+  return Math.max(0, Math.min(7, Math.round(p * 7)));
+}
+function drawCurtains(t) {
+  const [cw, ch] = curtainMeta.cell, fl = curtainFrame(t, 0.42, 0), fr = curtainFrame(t, 0.33, 2.1);
+  b.drawImage(rodImg, CURT.rodX, CURT.y + curtainMeta.rod_y, rodImg.width, rodImg.height);                          // rod: the 220px strip twice, overlapped, to span the frame
+  b.drawImage(rodImg, CURT.rodX + CURT.rodW - rodImg.width, CURT.y + curtainMeta.rod_y, rodImg.width, rodImg.height);
+  b.drawImage(curtainImg, fl * cw, 0, cw, ch, CURT.x0 - curtainMeta.header_x, CURT.y, cw, ch);
+  b.drawImage(curtainImg, fr * cw, ch, cw, ch, CURT.xr, CURT.y, cw, ch);
+}
+
 function frame(ms) {
   const t = ms / 1000;
   b.setTransform(K, 0, 0, K, 0, 0); b.imageSmoothingEnabled = false;   // draw in 480x270 room units
@@ -210,6 +226,7 @@ function frame(ms) {
   drawPrecip(t);              // rain / snow outside, behind the frame
   b.drawImage(shell, 0, 0);   // 1+3. room architecture and window frame (window glass is transparent)
   drawSunbeams(L);
+  drawCurtains(t);            // 3. curtains at the window, over the sunbeams and behind the furniture
   for (const k of ['shelves', 'hang']) { const i = LAYOUT[k].img; b.drawImage(i, LAYOUT[k].x, LAYOUT[k].y, i.width / K, i.height / K); }   // wall decor, drawn over the sunbeams so the light never washes it out
   // 4-7: floor rug first, then furniture on top of it (back to front by floor position)
   const dw = (i) => i.width / K, dh = (i) => i.height / K;   // sprites are 2x art, drawn at room units
