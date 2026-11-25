@@ -17,9 +17,9 @@ export const GLASS = (() => { const a = proj(-WIN.u, WIN.v1, 1), b = proj(WIN.u,
 // Where the kitty can sleep: world position -> screen position + size
 const spot = (u, v, z) => { const [x, y, s] = proj(u, v, z); return { x: Math.round(x), y: Math.round(y), k: s * 1.25 }; };
 export const SPOTS = {
-  bed:  spot(178, 70, 0.55),
-  sill: spot(70, 56, 0.94),
-  desk: spot(-190, 92, 0.72),
+  bed:  spot(176, 70, 0.5),
+  sill: spot(10, 56, 0.94),
+  desk: spot(-190, 92, 0.7),
   rug:  spot(0, 0, 0.46),
 };
 export const hitSpot = (x, y) => {
@@ -147,22 +147,28 @@ function ceilingShader(u, z) {
 }
 
 // ── STATIC ROOM (painted once into its own canvas) ──────────────────
-let room;
+let room, rc, layer, lc;
+// painted geometry is flushed onto the room canvas in layers, so billboard details (plants, pillows)
+// can sit between pieces of furniture and be hidden by whatever is in front of them.
+function flush() { lc.putImageData(img, 0, 0); rc.drawImage(layer, 0, 0); d.fill(0); }
 export function buildRoom() {
-  room = document.createElement('canvas'); room.width = W; room.height = H;
-  const c = room.getContext('2d');
-  img = c.createImageData(W, H); d = img.data;
-
-  // structure: ceiling, floor, back wall (with a window-shaped hole), side walls
+  room = document.createElement('canvas'); room.width = W; room.height = H; rc = room.getContext('2d');
+  layer = document.createElement('canvas'); layer.width = W; layer.height = H; lc = layer.getContext('2d');
+  img = lc.createImageData(W, H); d = img.data;
+  GLOWS.bulbs = [];
+  // 1. the shell of the room, back wall and window
   paintV(270, -243, 243, -0.02, 1.0, 0.8, ceilingShader);
   paintV(0, -243, 243, -0.02, 1.0, 1, floorShader);
   paintZ(1, -243, 243, -2, 272, 1, (u, v) => (Math.abs(u) < WIN.u && v > WIN.v0 && v < WIN.v1 ? null : plaster(u, v)));
   paintU(-240, -0.02, 1.0, -3, 272, 0.82, (z, v) => plaster(z * 300, v));
   paintU(240, -0.02, 1.0, -3, 272, 0.82, (z, v) => plaster(z * 300 + 40, v));
-
-  ceilingBeams(); windowParts(); backWallBits(); desk(); chair(); bed(); sideWallDecor();
-  c.putImageData(img, 0, 0);
-  decorations(c);
+  ceilingBeams(); windowParts(); backWallBits(); flush();
+  // 2. things that sit against the back wall, behind the furniture
+  backDecor(rc);
+  // 3. furniture (far to near) and shelves
+  sideShelves(); desk(); bed(); chair(); flush();
+  // 4. details on top of the furniture, then foreground plants and lights
+  frontDecor(rc);
 }
 
 function ceilingBeams() {
@@ -198,23 +204,23 @@ function backWallBits() {
     box(u0 - 5, u1 + 5, v0 - 5, v1 + 5, 0.985, 1.0, wood(P.woodM, 5));
     paintZ(0.984, u0, u1, v0, v1, 1, (u, v) => art((u - u0) / (u1 - u0), (v - v0) / (v1 - v0)));
   };
-  frame(-228, -186, 150, 200, (a, b) => { if (b < 0.45 + Math.sin(a * 6) * 0.08) return a > 0.5 ? P.slate : P.night; const t = 1 - (b - 0.45) * 1.5; const c = mc(P.peach, P.slate, 1 - t); return (Math.hypot(a - 0.68, b - 0.62) < 0.13) ? P.gold : c; });
+  frame(-232, -208, 140, 186, (a, b) => { if (b < 0.45 + Math.sin(a * 6) * 0.08) return a > 0.5 ? P.slate : P.night; const t = 1 - (b - 0.45) * 1.5; const c = mc(P.peach, P.slate, 1 - t); return (Math.hypot(a - 0.68, b - 0.62) < 0.13) ? P.gold : c; });
 }
 
 function desk() {
-  const top = 92, z0 = 0.16, z1 = 0.9;
+  const top = 92, z0 = 0.16, z1 = 0.8;
   box(-240, -122, top - 8, top, z0, z1, wood(P.woodL, 13));                 // desktop
-  box(-240, -132, 0, top - 8, 0.52, z1, wood(P.woodM, 14));                   // drawer unit
+  box(-240, -132, 0, top - 8, 0.46, z1, wood(P.woodM, 14));                   // drawer unit
   // drawers on its side
-  paintU(-132, 0.545, 0.885, 8, top - 11, 1, (z, v) => {
-    const q = (v - 8) / 24, n = Math.floor(q), f = q - n, zz = (z - 0.545) / 0.34;
+  paintU(-132, 0.485, 0.795, 8, top - 11, 1, (z, v) => {
+    const q = (v - 8) / 24, n = Math.floor(q), f = q - n, zz = (z - 0.485) / 0.31;
     if (n > 2 || n < 0) return null;
     if (f < 0.07 || zz < 0.03 || zz > 0.97) return dk(P.woodM, 0.45);
     if (Math.abs(zz - 0.5) < 0.12 && Math.abs(f - 0.5) < 0.1) return P.gold;
     return f > 0.88 ? lt(P.woodL, 0.2) : P.woodL;
   });
   for (const z of [z0 + 0.005, 0.5]) box(-128, -122, 0, top - 8, z, z + 0.022, wood(P.woodM, 15)); // front legs
-  box(-240, -236, 0, top - 8, z0, z1, wood(P.woodD, 16));                    // back panel
+  box(-240, -236, 0, top - 8, z0, z1, wood(P.woodM, 16));                    // back panel
   // laptop
   box(-218, -176, top, top + 3, 0.28, 0.5, solid(P.mauve));
   box(-218, -214, top + 3, top + 52, 0.28, 0.5, solid(P.mauve));
@@ -228,11 +234,11 @@ function desk() {
   });
   // mug, pencil cup, notebook
   box(-168, -158, top, top + 11, 0.545, 0.58, solid(P.cream)); box(-205, -197, top, top + 14, 0.52, 0.55, solid(P.sky));
-  box(-210, -178, top, top + 2, 0.7, 0.83, solid(P.rose)); box(-208, -180, top + 2, top + 4, 0.71, 0.82, solid(P.cream));
+  box(-210, -178, top, top + 2, 0.62, 0.74, solid(P.rose)); box(-208, -180, top + 2, top + 4, 0.63, 0.73, solid(P.cream));
   // shelf with books above the desk
-  box(-240, -214, 152, 157, 0.22, 0.86, wood(P.woodM, 17));
+  box(-240, -214, 152, 157, 0.22, 0.8, wood(P.woodM, 17));
   const rand = rng(21), cols = [P.rose, P.blue, P.peach, P.plum, P.leaf, P.cream, P.sky, P.pot];
-  for (let z = 0.23; z < 0.62; z += 0.026) { const h = 14 + Math.floor(rand() * 12); box(-238, -224, 157, 157 + h, z, z + 0.022, solid(cols[Math.floor(rand() * cols.length)])); }
+  for (let z = 0.23; z < 0.5; z += 0.026) { const h = 14 + Math.floor(rand() * 12); box(-238, -224, 157, 157 + h, z, z + 0.022, solid(cols[Math.floor(rand() * cols.length)])); }
   // pinned corkboard + notes on the left wall
   paintU(-239.5, 0.3, 0.8, 104, 150, 1, (z, v) => {
     const a = (z - 0.3) / 0.5, b = (v - 104) / 46;
@@ -252,81 +258,143 @@ function chair() {
 }
 
 function bed() {
-  const x0 = 108, x1 = 240, z0 = 0.2, z1 = 0.9;
-  box(x0, x1, 0, 104, z1, z1 + 0.03, wood(P.woodM, 23));                        // headboard
-  box(x0, x1, 10, 38, z0, z1, wood(P.woodM, 22));                              // frame
-  box(x0 + 4, x1 - 2, 0, 10, z0 + 0.01, z0 + 0.04, solid(P.woodD)); box(x0 + 4, x1 - 2, 0, 10, z1 - 0.04, z1 - 0.01, solid(P.woodD)); // feet
-  box(x0 + 6, x1 - 4, 38, 62, z0 + 0.02, z1 - 0.02, solid(P.cream));            // mattress
-  // quilt: folds on the sides, patchwork on top, cream hem at the foot
-  box(x0 + 2, x1 - 2, 38, 70, 0.3, 0.84, (f, p, q, A, B) => {
-    const fold = 0.5 + 0.5 * Math.sin(p * 0.13 + (f === 'f' ? 0 : 1));
-    if (f === 't') {
-      const gx = Math.floor(p / 22), gz = Math.floor(q / 22), cell = (gx + gz) % 2 === 0 ? P.rose : lt(P.rose, 0.22);
-      let c = (gx * 2 + gz) % 5 === 0 ? P.peach : (gx + gz * 3) % 7 === 0 ? P.lilac : cell;
-      return (p % 22 < 1.3 || q % 22 < 1.3) ? dk(c, 0.22) : (hash(p, q, 14) < 0.05 ? lt(c, 0.12) : c);
-    }
-    return mc(lt(P.rose, 0.05), dk(P.rose, 0.3), fold * 0.4 + (1 - q / B) * 0.2);
+  const x0 = 112, x1 = 240, z0 = 0.2, z1 = 0.86, qz0 = 0.3, qz1 = 0.8;
+  box(x0, x1, 0, 112, z1, z1 + 0.03, wood(P.woodM, 23));                        // headboard
+  box(x0, x1, 12, 36, z0, z1, wood(P.woodM, 22));                               // slim frame
+  box(x0 + 4, x1 - 2, 0, 12, z0 + 0.01, z0 + 0.04, solid(P.woodD)); box(x0 + 4, x1 - 2, 0, 12, z1 - 0.04, z1 - 0.01, solid(P.woodD));
+  box(x0 + 5, x1 - 4, 36, 60, z0 + 0.02, z1 - 0.02, solid(P.cream));            // mattress
+  const base = P.rose, qa = x0 + 1, qb = x1 - 1;
+  // rumpled top: soft fold light/dark, quilting stitches, puffy edges
+  paintV(70, qa, qb, qz0, qz1, 1.08, (u, z) => {
+    const zz = z * ZS, n = Math.sin(u * 0.075 + z * 7) * 0.5 + Math.sin(u * 0.16 - zz * 0.05 + 1.3) * 0.3 + Math.sin(zz * 0.09 + u * 0.03) * 0.25;
+    const ed = Math.min(u - qa, qb - u, zz - qz0 * ZS, qz1 * ZS - zz);
+    if (ed < 3.5) { const cx = Math.min(u - qa, qb - u), cz = Math.min(zz - qz0 * ZS, qz1 * ZS - zz); if (cx < 3.5 && cz < 3.5 && Math.hypot(3.5 - cx, 3.5 - cz) > 3.5) return null; }
+    let c = n > 0 ? lt(base, n * 0.3) : dk(base, -n * 0.28);
+    if (Math.abs(((u + zz * 0.7) % 36) - 18) < 0.8 || Math.abs(((u - zz * 0.7) % 36) - 18) < 0.8) c = dk(c, 0.1);
+    if (ed < 2) c = lt(c, 0.25);
+    return hash(u, zz, 14) < 0.04 ? lt(c, 0.12) : c;
   });
-  box(x0, x1, 0, 46, z0, z0 + 0.025, wood(P.woodM, 24));                        // low footboard
+  // draped side (toward the room) with a wavy hem
+  paintU(qa, qz0, qz1, 30, 70, 0.9, (z, v) => {
+    const zz = z * ZS, hem = 44 + Math.sin(zz * 0.16) * 4 + Math.sin(zz * 0.07 + 1) * 3;
+    if (v < hem) return null; if (v < hem + 1.6) return dk(base, 0.5);
+    const f = 0.5 + 0.5 * Math.sin(zz * 0.19 + 0.6 * Math.sin(v * 0.2));
+    return mc(lt(base, 0.08), dk(base, 0.45), f * 0.45 + (70 - v) / 90);
+  });
+  // draped foot end
+  paintZ(qz0, qa, qb, 30, 70, 1, (u, v) => {
+    const hem = 42 + Math.sin(u * 0.13) * 4 + Math.sin(u * 0.05 + 2) * 3;
+    if (v < hem) return null; if (v < hem + 1.6) return dk(base, 0.5);
+    const f = 0.5 + 0.5 * Math.sin(u * 0.2 + 0.5 * Math.sin(v * 0.25));
+    return mc(lt(base, 0.05), dk(base, 0.4), f * 0.4 + (70 - v) / 100);
+  });
+  // folded throw at the foot of the bed
+  box(x0 + 6, x1 - 8, 70, 76, 0.32, 0.46, (f, p, q, A, B) => { const stripe = Math.floor(q / 6) % 2 ? P.peach : lt(P.peach, 0.2); return (f === 't' && p < 3) ? dk(P.peach, 0.2) : (f === 't' ? stripe : P.peach); });
 }
 
-function sideWallDecor() {
-  // right wall: shelf + pictures above the bed
-  box(228, 240, 150, 155, 0.3, 0.88, wood(P.woodM, 26));
-  const art = [(a, b) => (b < 0.5 ? mc(P.lilac, P.peach, b * 1.5) : (b < 0.55 + Math.sin(a * 9) * 0.1 ? P.blue : P.slate)), (a, b) => (b < 0.5 + Math.sin(a * 7) * 0.1 ? mc(P.slate, P.peach, b) : P.night)];
-  [[0.34, 0.5, 170, 222, 0], [0.56, 0.74, 176, 220, 1]].forEach(([za, zb, v0, v1, i]) => {
-    paintU(239.2, za - 0.02, zb + 0.02, v0 - 4, v1 + 4, 1, () => P.woodM);
-    paintU(239.0, za, zb, v0, v1, 1, (z, v) => art[i]((z - za) / (zb - za), (v - v0) / (v1 - v0)));
-  });
+const SHELVES = [{ v: 150, z0: 0.3, z1: 0.82 }, { v: 190, z0: 0.3, z1: 0.82 }];
+function sideShelves() {
+  for (const sh of SHELVES) {
+    box(220, 240, sh.v, sh.v + 5, sh.z0, sh.z1, wood(P.woodM, 26));
+    for (const z of [sh.z0 + 0.03, sh.z1 - 0.06]) box(228, 240, sh.v - 12, sh.v, z, z + 0.02, wood(P.woodD, 27)); // brackets
+  }
+  // a stack of books on the lower shelf
+  const rand = rng(77), cols = [P.rose, P.blue, P.plum, P.leaf, P.cream, P.pot];
+  for (let k = 0; k < 6; k++) box(228, 238, 195, 195 + 16 + Math.floor(rand() * 8), 0.33 + k * 0.022, 0.352 + k * 0.022, solid(cols[k % cols.length]));
+  box(226, 238, 195, 199, 0.5, 0.62, solid(P.sky)); box(227, 238, 199, 203, 0.51, 0.61, solid(P.rose)); box(228, 237, 203, 206, 0.52, 0.6, solid(P.cream));
 }
 
-// ── billboard details: plants, cushions, lights (drawn onto the finished room) ──
-function decorations(c) {
-  const R = (x, y, w, h, col) => { c.fillStyle = typeof col === 'string' ? col : hex(col); c.fillRect(Math.round(x), Math.round(y), Math.max(1, Math.round(w)), Math.max(1, Math.round(h))); };
-  const disc = (cx, cy, rad, col) => { c.fillStyle = typeof col === 'string' ? col : hex(col); rad = Math.max(1, Math.round(rad)); for (let dy = -rad; dy <= rad; dy++) { const w = Math.floor(Math.sqrt(rad * rad - dy * dy + 0.5)); c.fillRect(Math.round(cx - w), Math.round(cy + dy), w * 2 + 1, 1); } };
-  const ell = (cx, cy, rx, ry, col) => { c.fillStyle = typeof col === 'string' ? col : hex(col); for (let dy = -Math.round(ry); dy <= Math.round(ry); dy++) { const w = Math.floor(rx * Math.sqrt(Math.max(0, 1 - (dy * dy) / (ry * ry + 0.5)))); c.fillRect(Math.round(cx - w), Math.round(cy + dy), w * 2 + 1, 1); } };
-  const leafPlant = (u, z, h, n, seed, potCol = P.pot) => {
-    const [x, y, s] = proj(u, 0, z), rand = rng(seed), pw = 16 * s * 1.6, ph = 15 * s * 1.6;
-    ell(x, y - 1, pw * 0.8, 3 * s, rgba('#2A2230', 0.3) && '#3a2c38');
-    R(x - pw / 2, y - ph, pw, ph, potCol); R(x - pw / 2 - 1, y - ph - 2, pw + 2, 3, lt(potCol, 0.2)); R(x - pw / 2, y - 3, pw, 2, dk(potCol, 0.3));
-    for (let i = 0; i < n; i++) {
-      const a = -1.25 + (i / (n - 1)) * 2.5 + (rand() - 0.5) * 0.2, len = h * s * (0.6 + rand() * 0.5), x1 = x + Math.sin(a) * len, y1 = y - ph - Math.cos(a) * len;
-      c.strokeStyle = hex(P.leafD); c.lineWidth = Math.max(1, s * 1.3); c.beginPath(); c.moveTo(x, y - ph); c.lineTo(x1, y1); c.stroke();
-      ell(x1, y1, 10 * s * 1.3, 5 * s * 1.3, P.leaf); ell(x1 - 1, y1 - 1, 7 * s * 1.3, 3 * s * 1.3, P.leafL);
+// ── billboard details: plants, pillows, lights (drawn onto the room between furniture layers) ──
+const INK = hx('#1E3330');
+function kit(c) {
+  const col = (v) => (typeof v === 'string' ? v : hex(v));
+  const R = (x, y, w, h, v) => { c.fillStyle = col(v); c.fillRect(Math.round(x), Math.round(y), Math.max(1, Math.round(w)), Math.max(1, Math.round(h))); };
+  const disc = (cx, cy, rad, v) => { c.fillStyle = col(v); rad = Math.max(1, Math.round(rad)); for (let dy = -rad; dy <= rad; dy++) { const w = Math.floor(Math.sqrt(rad * rad - dy * dy + 0.5)); c.fillRect(Math.round(cx - w), Math.round(cy + dy), w * 2 + 1, 1); } };
+  const ell = (cx, cy, rx, ry, v) => { c.fillStyle = col(v); for (let dy = -Math.round(ry); dy <= Math.round(ry); dy++) { const w = Math.floor(rx * Math.sqrt(Math.max(0, 1 - (dy * dy) / (ry * ry + 0.5)))); c.fillRect(Math.round(cx - w), Math.round(cy + dy), w * 2 + 1, 1); } };
+  // one outlined, shaded leaf pointing from (cx,cy) along angle `ang`
+  const leaf = (cx, cy, len, wid, ang, tones, style = 'oval') => {
+    const ca = Math.cos(ang), sa = Math.sin(ang), Rr = len + wid + 2;
+    for (let y = Math.floor(cy - Rr); y <= cy + Rr; y++) for (let x = Math.floor(cx - Rr); x <= cx + Rr; x++) {
+      const dx = x + 0.5 - cx, dy = y + 0.5 - cy, a = dx * ca + dy * sa, b = -dx * sa + dy * ca;
+      if (a < 0 || a > len) continue;
+      const t = a / len, w = wid * Math.pow(Math.sin(Math.PI * Math.min(1, t * 0.9 + 0.05)), style === 'bird' ? 0.55 : 0.75), ab = Math.abs(b);
+      if (ab > w) continue;
+      if (style === 'monstera' && t > 0.3 && ab > w * 0.4 && ((a * 0.55 + (b > 0 ? 1.5 : 0)) % 3) < 0.9) continue;
+      let v = tones[1];
+      if (ab > w - 1.1) v = INK; else if (ab < 0.7) v = tones[0]; else if (b < -w * 0.25) v = tones[2];
+      c.fillStyle = col(v); c.fillRect(x, y, 1, 1);
     }
   };
-  leafPlant(-205, 0.06, 70, 11, 41);      // big leafy plant framing the front-left corner
-  leafPlant(-215, 0.95, 46, 8, 33, P.rose); // small one in the back-left corner
-  // sill: cactus, succulent, books
-  const sillPlant = (u, col, tall) => { const [x, y, s] = proj(u, 56, 0.95); R(x - 6 * s * 1.5, y - 9 * s * 1.5, 12 * s * 1.5, 9 * s * 1.5, col); R(x - 2 * s * 1.5, y - (9 + tall) * s * 1.5, 4 * s * 1.5, tall * s * 1.5, P.leaf); R(x - 6 * s * 1.5, y - (6 + tall * 0.7) * s * 1.5, 4 * s * 1.5, 3 * s * 1.5, P.leaf); R(x + 3 * s * 1.5, y - (6 + tall * 0.5) * s * 1.5, 4 * s * 1.5, 3 * s * 1.5, P.leaf); };
-  sillPlant(-95, P.pot, 20); sillPlant(-60, P.cream, 9);
-  const [bx, by, bs] = proj(105, 56, 0.95);
-  R(bx - 22 * bs, by - 5 * bs * 1.5, 44 * bs, 5 * bs * 1.5, P.rose); R(bx - 20 * bs, by - 10 * bs * 1.5, 40 * bs, 5 * bs * 1.5, P.sky); R(bx - 21 * bs, by - 14 * bs * 1.5, 42 * bs, 4 * bs * 1.5, P.cream);
-  // hanging planters (right of window) on the back wall
-  for (const [u, v, n] of [[205, 232, 18], [205, 190, 22], [235, 215, 16]]) {
-    const [x, y, s] = proj(u, v, 0.99), rand = rng(u + v);
-    R(x, proj(u, 270, 0.99)[1], 1, y - proj(u, 270, 0.99)[1], P.woodD);
-    ell(x, y + 3 * s, 11 * s * 1.5, 6 * s * 1.5, P.pot); ell(x, y, 11 * s * 1.5, 3 * s * 1.5, P.woodD);
-    for (let i = 0; i < 12; i++) disc(x + (rand() - 0.5) * 20 * s * 1.5, y - 2 + (rand() - 0.5) * 5, 2.5 * s * 1.5, i % 3 ? P.leaf : P.leafL);
-    for (let i = 0; i < 5; i++) { const vx = x - 9 * s * 1.5 + i * 4.5 * s * 1.5, vl = n * s * (0.5 + rand() * 0.6); R(vx, y + 5 * s * 1.5, 1, vl, P.leafD); for (let k = 3; k < vl; k += 4) { R(vx - 1, y + 5 * s * 1.5 + k, 2, 1, P.leaf); R(vx + 1, y + 7 * s * 1.5 + k, 1, 1, P.leafL); } }
+  // round pot with rim, outline and a lit side
+  const pot = (x, y, w, h, v) => {
+    for (let r = 0; r < h; r++) {
+      const ww = Math.round(w * (0.74 + 0.26 * (1 - r / h)) * (r < 3 ? 1.12 : 1)), x0 = Math.round(x - ww / 2);
+      R(x0, y - h + r, ww, 1, r < 3 ? lt(v, 0.2) : v); R(x0, y - h + r, 1, 1, INK); R(x0 + ww - 1, y - h + r, 1, 1, INK);
+      if (r >= 3) { R(x0 + 1, y - h + r, Math.max(1, ww * 0.22), 1, lt(v, 0.18)); R(x0 + ww - Math.max(2, ww * 0.25), y - h + r, Math.max(1, ww * 0.22), 1, dk(v, 0.25)); }
+    }
+    R(Math.round(x - w * 0.56), y - h, Math.round(w * 1.12), 1, INK); R(Math.round(x - w * 0.37), y - 1, Math.round(w * 0.74), 1, INK);
+    R(Math.round(x - w * 0.5), y - h + 1, Math.round(w), 1, dk(P.woodD, 0.1));
+  };
+  const GREENS = [[hx('#5E8F6E'), hx('#4F7A68'), hx('#86AA86')], [hx('#6FA070'), hx('#558A5E'), hx('#9CC48A')], [hx('#4F7A68'), hx('#3E6658'), hx('#7FA383')]];
+  const plant = (x, y, sc, kind, potCol, seed = 1) => {
+    const rand = rng(seed), pw = 15 * sc, ph = 13 * sc, tones = GREENS[seed % 3];
+    pot(x, y, pw, ph, potCol);
+    const top = y - ph;
+    if (kind === 'bird') { [[-0.95, 26, 6], [0.9, 24, 6], [-0.35, 36, 7], [0.4, 38, 7], [0.02, 44, 7]].forEach(([a, l, w]) => leaf(x, top, l * sc, w * sc * 0.55, -Math.PI / 2 + a * 0.9, tones, 'bird')); }
+    else if (kind === 'monstera') { [[-1.3, 22, 9], [1.25, 22, 9], [-0.7, 30, 11], [0.7, 30, 11], [0.05, 34, 12]].forEach(([a, l, w]) => leaf(x, top, l * sc, w * sc * 0.6, -Math.PI / 2 + a, tones, 'monstera')); }
+    else { for (let i = 0; i < 6; i++) { const a = -1.25 + i * 0.5 + (rand() - 0.5) * 0.2, l = (16 + rand() * 10) * sc; leaf(x, top, l, 6 * sc * 0.85, -Math.PI / 2 + a, tones, 'oval'); } }
+  };
+  // vines that trail down from a pot (small paired leaves)
+  const trail = (x, y, n, len, seed) => { const rand = rng(seed); for (let i = 0; i < n; i++) { const vx = x - 8 + (i / Math.max(1, n - 1)) * 16, vl = len * (0.5 + rand() * 0.6); R(vx, y, 1, vl, INK); for (let k = 3; k < vl; k += 4) { disc(vx - 1, y + k, 1.4, k % 8 < 4 ? P.leaf : P.leafL); disc(vx + 2, y + k + 2, 1.4, P.leaf); } } };
+  const pillow = (u, v, z, v0, sc) => { const [x, y, s] = proj(u, v, z), rx = 24 * s * sc, ry = 11 * s * sc; ell(x, y + 2 * s, rx + 1, ry + 1, INK); ell(x, y, rx, ry, v0); ell(x - 4 * s, y - 3 * s, rx * 0.65, ry * 0.5, lt(v0, 0.4)); R(x - rx * 0.5, y + ry * 0.35, rx * 0.9, 1, dk(v0, 0.2)); R(x + rx * 0.3, y - ry * 0.2, 1, ry * 0.7, dk(v0, 0.15)); };
+  return { R, disc, ell, leaf, pot, plant, trail, pillow };
+}
+
+function backDecor(c) {
+  const k = kit(c);
+  // sill: plants (the cat sits in the middle) + a neat stack of books at the right end
+  { const [x, y, s] = proj(-115, 56, 0.95); k.plant(x, y, s * 1.1, 'fiddle', P.pot, 1); }
+  { const [x, y, s] = proj(-78, 56, 0.95); k.plant(x, y, s * 0.9, 'bird', P.cream, 2); }
+  { const [x, y, s] = proj(66, 56, 0.95), w = 40 * s * 1.4; k.R(x - w / 2, y - 7 * s * 1.5, w, 7 * s * 1.5, P.rose); k.R(x - w / 2 + 2, y - 14 * s * 1.5, w - 4, 7 * s * 1.5, P.sky); k.R(x - w / 2 + 1, y - 20 * s * 1.5, w - 2, 6 * s * 1.5, P.cream); k.R(x - w / 2, y - 7 * s * 1.5, w, 1, dk(P.rose, 0.4)); k.R(x - w / 2 + 2, y - 14 * s * 1.5, w - 4, 1, dk(P.sky, 0.4)); }
+  // hanging planters, right of the window
+  for (const [u, v, n, seed] of [[205, 236, 20, 3], [232, 205, 24, 4], [205, 182, 22, 5]]) {
+    const [x, y, s] = proj(u, v, 0.99), top = proj(u, 270, 0.99)[1];
+    k.R(x, top, 1, y - top - 10 * s * 1.5, P.woodD); k.pot(x, y + 8 * s * 1.5, 18 * s * 1.5, 12 * s * 1.5, P.pot);
+    const rand = rng(seed); for (let i = 0; i < 7; i++) k.leaf(x, y - 3, (8 + rand() * 6) * s * 1.5, 4 * s * 1.5, -Math.PI / 2 + (i - 3) * 0.5, GREENS_BACK[i % 3]);
+    k.trail(x, y + 7 * s * 1.5, 5, n * s * 1.5, seed);
   }
+  // tall plant in the back-left corner, standing clear of the desk
+  { const [x, y, s] = proj(-212, 0, 0.95); k.plant(x, y, s * 1.5, 'bird', P.rose, 5); }
+}
+const GREENS_BACK = [[hx('#5E8F6E'), hx('#4F7A68'), hx('#86AA86')], [hx('#6FA070'), hx('#558A5E'), hx('#9CC48A')], [hx('#4F7A68'), hx('#3E6658'), hx('#7FA383')]];
+
+function frontDecor(c) {
+  const k = kit(c), { R, disc, ell } = k;
+  // shelves: plants, books already placed; fairy lights along the edges
+  const shelfPlants = [[0, 0.36, 'monstera', P.pot], [0, 0.5, 'fiddle', P.cream], [0, 0.64, 'bird', P.pot], [0, 0.78, 'fiddle', P.rose]];
+  shelfPlants.forEach(([, z, kind, pc], i) => { const [x, y, s] = proj(231, 155, z); k.plant(x, y, s * 0.62, kind, pc, i + 1); });
+  { const [x, y, s] = proj(231, 195, 0.72); k.plant(x, y, s * 0.6, 'fiddle', P.pot, 7); k.trail(x - 2, y - 2, 4, 20 * s, 8); }
+  { const [x, y, s] = proj(-231, 157, 0.7); k.plant(x, y, s * 0.6, 'fiddle', P.pot, 4); k.trail(x, y - 3, 4, 18 * s, 9); }
+  { const [x, y, s] = proj(-231, 157, 0.78); k.plant(x, y, s * 0.55, 'bird', P.cream, 6); }
+  // plant on the desk, by the laptop
+  { const [x, y, s] = proj(-190, 92, 0.36); k.plant(x, y, s * 0.55, 'fiddle', P.cream, 3); }
   // pillows + plush on the bed
-  const pillow = (u, v, z, col, sc) => { const [x, y, s] = proj(u, v, z); ell(x, y + 2 * s, 26 * s * sc, 11 * s * sc, dk(col, 0.3)); ell(x, y, 26 * s * sc, 11 * s * sc, col); ell(x - 3 * s, y - 3 * s, 18 * s * sc, 6 * s * sc, lt(col, 0.35)); };
-  pillow(172, 76, 0.79, P.cream, 1.2); pillow(214, 80, 0.8, P.peach, 1.1);
-  { const [x, y, s] = proj(140, 70, 0.42), k = s * 1.4; ell(x, y - 6 * k, 7 * k, 6 * k, P.woodM); ell(x, y - 6 * k, 5 * k, 4 * k, P.woodL); disc(x - 5 * k, y - 12 * k, 2.5 * k, P.woodM); disc(x + 5 * k, y - 12 * k, 2.5 * k, P.woodM); ell(x, y - 10 * k, 4 * k, 3 * k, P.woodL); R(x - 2 * k, y - 11 * k, 1, 1, P.ink); R(x + 2 * k, y - 11 * k, 1, 1, P.ink); }
+  k.pillow(168, 76, 0.8, P.cream, 1.25); k.pillow(212, 80, 0.81, P.peach, 1.1);
+  { const [x, y, s] = proj(138, 72, 0.42), q = s * 1.4; ell(x, y - 6 * q, 8 * q, 7 * q, INK); ell(x, y - 6 * q, 7 * q, 6 * q, P.woodM); ell(x - 1, y - 7 * q, 4 * q, 4 * q, P.woodL); disc(x - 5 * q, y - 12 * q, 3 * q, P.woodM); disc(x + 5 * q, y - 12 * q, 3 * q, P.woodM); R(x - 2 * q, y - 10 * q, 1, 1, INK); R(x + 2 * q, y - 10 * q, 1, 1, INK); }
   // desk lamp (articulated)
-  { const [x, y, s] = proj(-208, 92, 0.86), k = s * 1.5; c.strokeStyle = hex(P.slate); c.lineWidth = Math.max(2, 2.5 * k);
-    R(x - 9 * k, y - 3 * k, 18 * k, 3 * k, P.slate); c.beginPath(); c.moveTo(x, y - 3 * k); c.lineTo(x - 10 * k, y - 28 * k); c.lineTo(x + 8 * k, y - 42 * k); c.stroke();
-    ell(x + 12 * k, y - 42 * k, 11 * k, 5 * k, P.mauve); ell(x + 12 * k, y - 39 * k, 8 * k, 2 * k, '#FFF1D6'); GLOWS.lamp = [x + 12 * k, y - 36 * k]; }
+  { const [x, y, s] = proj(-208, 92, 0.76), q = s * 1.5; c.strokeStyle = hex(P.slate); c.lineWidth = Math.max(2, 2.5 * q);
+    R(x - 9 * q, y - 3 * q, 18 * q, 3 * q, P.slate); c.beginPath(); c.moveTo(x, y - 3 * q); c.lineTo(x - 10 * q, y - 28 * q); c.lineTo(x + 8 * q, y - 42 * q); c.stroke();
+    ell(x + 12 * q, y - 42 * q, 11 * q, 5 * q, P.mauve); ell(x + 12 * q, y - 39 * q, 8 * q, 2 * q, '#FFF1D6'); GLOWS.lamp = [x + 12 * q, y - 36 * q]; }
   { const [x, y] = proj(-214, 125, 0.39); GLOWS.laptop = [x, y]; }
-  // floor bowls + a toy mouse
-  { const [x, y, s] = proj(60, 0, 0.58); R(x - 8 * s * 1.5, y - 4 * s * 1.5, 16 * s * 1.5, 4 * s * 1.5, P.cream); R(x - 6 * s * 1.5, y - 5 * s * 1.5, 12 * s * 1.5, 2 * s * 1.5, P.pot); const [x2, y2] = proj(95, 0, 0.58); R(x2 - 6 * s * 1.5, y2 - 3 * s * 1.5, 12 * s * 1.5, 3 * s * 1.5, P.sky); }
-  // string lights draped along the ceiling edge of the back and side walls
+  // floor bowls
+  { const [x, y, s] = proj(60, 0, 0.62), q = s * 1.5; R(x - 8 * q, y - 4 * q, 16 * q, 4 * q, P.cream); R(x - 6 * q, y - 5 * q, 12 * q, 2 * q, P.pot); const [x2, y2] = proj(95, 0, 0.62); R(x2 - 6 * q, y2 - 3 * q, 12 * q, 3 * q, P.sky); }
+  // string lights: along the ceiling edge, and swagged along both shelves
   const bulbs = [];
-  const swag = (pt, n) => { let prev = null; for (let i = 0; i <= 60; i++) { const t = i / 60, [x, y] = pt(t); if (prev) { c.strokeStyle = hex(P.woodD); c.lineWidth = 1; c.beginPath(); c.moveTo(prev[0], prev[1]); c.lineTo(x, y); c.stroke(); } prev = [x, y]; } for (let i = 1; i < n; i++) { const [x, y] = pt(i / n); R(x, y, 1, 3, P.ink); disc(x, y + 5, 2, P.gold); R(x - 1, y + 4, 1, 1, '#FFF3E6'); bulbs.push([x, y + 5]); } };
+  const swag = (pt, n, glow = true) => { let prev = null; for (let i = 0; i <= 60; i++) { const [x, y] = pt(i / 60); if (prev) { c.strokeStyle = hex(P.woodD); c.lineWidth = 1; c.beginPath(); c.moveTo(prev[0], prev[1]); c.lineTo(x, y); c.stroke(); } prev = [x, y]; } for (let i = 1; i < n; i++) { const [x, y] = pt(i / n); R(x, y, 1, 3, INK); disc(x, y + 5, 2, P.gold); R(x - 1, y + 4, 1, 1, '#FFF3E6'); if (glow) bulbs.push([x, y + 5]); } };
   swag((t) => { const [x, y] = proj(-240 + 480 * t, 252 - Math.sin(t * Math.PI * 3) * 6, 0.99); return [x, y + 5]; }, 14);
   swag((t) => { const [x, y] = proj(-240, 258 - Math.sin(t * Math.PI * 2) * 7, 0.02 + t * 0.96); return [x, y]; }, 7);
   swag((t) => { const [x, y] = proj(240, 258 - Math.sin(t * Math.PI * 2) * 7, 0.02 + t * 0.96); return [x, y]; }, 7);
+  for (const sh of SHELVES) swag((t) => { const [x, y] = proj(221, sh.v + 3 - Math.sin(t * Math.PI * 3) * 2, sh.z0 + (sh.z1 - sh.z0) * t); return [x, y]; }, 8);
   GLOWS.bulbs = bulbs;
 }
 
@@ -353,9 +421,15 @@ function trees(season) {
   const crown = (cx, cy, rx, ry, seed) => {
     if (season === 'winter') return;
     const [dkc, mdc, ltc] = LEAVES[season], rand = rng(seed), blobs = [];
-    for (let i = 0; i < 20; i++) { const a = rand() * 6.28, dd = Math.sqrt(rand()); blobs.push([cx + Math.cos(a) * dd * rx, cy + Math.sin(a) * dd * ry, 5 + rand() * 6]); }
-    blobs.forEach(([x, y, r]) => disc(x, y + 3, Math.round(r), dkc)); blobs.forEach(([x, y, r]) => disc(x, y, Math.round(r), mdc)); blobs.forEach(([x, y, r]) => disc(x - 2, y - 3, Math.round(r * 0.6), ltc));
-    for (let i = 0; i < 150; i++) { const a = rand() * 6.28, dd = 0.75 + rand() * 0.45; R(cx + Math.cos(a) * rx * dd, cy + Math.sin(a) * ry * dd, 2, 2, rand() > 0.5 ? mdc : a < 3.3 && a > 0.3 ? dkc : ltc); }
+    for (let i = 0; i < 22; i++) { const a = rand() * 6.28, dd = Math.sqrt(rand()); blobs.push([cx + Math.cos(a) * dd * rx, cy + Math.sin(a) * dd * ry, 6 + rand() * 7]); }
+    blobs.forEach(([x, y, r]) => disc(x, y + 3, Math.round(r), '#1E3330'));
+    blobs.forEach(([x, y, r]) => disc(x, y + 2, Math.round(r) - 1, dkc));
+    for (let i = 0; i < 6; i++) { const bx = cx + (rand() - 0.5) * rx, by = cy + 6 + rand() * ry * 0.7; line(cx, cy + ry, bx, by, '#5A4350', 2); }
+    blobs.forEach(([x, y, r]) => disc(x, y, Math.round(r) - 1, mdc));
+    blobs.forEach(([x, y, r]) => { disc(x - 2, y - 3, Math.round(r * 0.55), ltc); });
+    for (let i = 0; i < 140; i++) { const a = rand() * 6.28, dd = 0.7 + rand() * 0.5, x = cx + Math.cos(a) * rx * dd, y = cy + Math.sin(a) * ry * dd; R(x, y, 2, 2, rand() > 0.55 ? ltc : (a < 3.3 && a > 0.3 ? dkc : mdc)); }
+    t.fillStyle = '#F6F3B8'; for (let i = 0; i < 12; i++) t.fillRect(Math.round(cx + (rand() - 0.5) * rx * 1.5), Math.round(cy + (rand() - 0.7) * ry * 1.2), 2, 2); // sunlit sparkles
+    t.globalCompositeOperation = 'destination-out'; for (let i = 0; i < 10; i++) t.fillRect(Math.round(cx + (rand() - 0.5) * rx * 1.4), Math.round(cy + (rand() - 0.3) * ry * 1.2), 2, 2); t.globalCompositeOperation = 'source-over'; // little gaps where the sky peeks through
     if (season === 'spring') for (let i = 0; i < 50; i++) { const a = rand() * 6.28, dd = Math.sqrt(rand()); R(cx + Math.cos(a) * dd * rx, cy + Math.sin(a) * dd * ry, 2, 2, rand() > 0.5 ? '#F2C1A3' : '#F8E0D0'); }
   };
   trunk(g.w - 42, g.h + 4, 20, 11, -4, 11); crown(g.w - 44, 34, 38, 28, 11);
