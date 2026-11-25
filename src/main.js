@@ -80,7 +80,7 @@ function drawSky() {
 // between the desk's right edge (x~183) and the bed's left edge (x~307), toward the foreground.
 const FLOOR_Y = 256;
 const LAYOUT = {
-  rug:  { img: rugImg,  x: 181, y: 234 },            // 130x38, centred between desk and bed (centre x=246)
+  rug:  { img: rugImg,  x: 142, y: 234 },            // 206x57 (was 130x38, +58%), centre x=245, runs toward the foreground, top on the floor line
   desk: { img: deskImg, x: 40,  y: FLOOR_Y - 114 },  // feet end at sprite row 114; left wall
   bed:  { img: bedImg,  x: 303, y: FLOOR_Y - 123 },  // hem ends at sprite row 123; right corner, edge past the frame
 };
