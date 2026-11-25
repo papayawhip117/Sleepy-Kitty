@@ -30,50 +30,107 @@ function skyAt(h) {
 const params = new URLSearchParams(location.search);
 const hourNow = () => params.has('hour') ? +params.get('hour') : new Date().getHours() + new Date().getMinutes() / 60;
 
-// Sunbeams: painted light shapes on the wall and floor. Strongest in the morning/afternoon, warmer near
-// sunrise/sunset, gone at night. Drawn right after the room shell so furniture sits in front of the light.
+// ---- lighting: one neutral room, lit in code ----
+// Every look is a preset on the hour clock, blended smoothly. No second room image is ever needed.
+//   tint  : multiply colour over the room (white = untouched)       beam : sunbeam overlay strength
+//   warm  : how orange the sunbeams are (low sun)                    lamp : desk-lamp glow strength
+const LIGHT = [ // hour, tint, beam, warm, lamp
+  [0,    [78, 88, 160],   0,    0,   1],
+  [5.5,  [84, 94, 164],   0,    0,   1],
+  [7,    [255, 232, 222], 0.38, 0.7, 0.25],   // morning: soft, low and warm
+  [9,    [255, 247, 238], 0.5,  0.3, 0],
+  [12,   [255, 255, 255], 0.55, 0,   0],      // bright midday
+  [16,   [255, 250, 240], 0.5,  0.25, 0],
+  [18,   [255, 214, 178], 0.45, 0.95, 0.3],   // warm evening sun
+  [19.5, [196, 150, 172], 0.14, 1,   0.8],
+  [21,   [80, 90, 160],   0,    0,   1],      // cool night
+  [24,   [78, 88, 160],   0,    0,   1],
+];
+function lightAt(h) {
+  let i = 0; while (i < LIGHT.length - 2 && h >= LIGHT[i + 1][0]) i++;
+  const [h0, t0, be0, w0, l0] = LIGHT[i], [h1, t1, be1, w1, l1] = LIGHT[i + 1];
+  const t = Math.min(1, Math.max(0, (h - h0) / (h1 - h0))), m = (x, y) => x + (y - x) * t;
+  return { tint: mixc(t0, t1, t), beam: m(be0, be1), warm: m(w0, w1), lamp: m(l0, l1) };
+}
+const skyTintAlpha = (h) => h >= 9 && h <= 17 ? 0 : 0.62 * Math.min(1, h < 9 ? (9 - h) / 2.25 : (h - 17) / 1.75);
+
+// Weather is an overlay too: the scenery is dimmed and drawn over with rain or snow, and the room dims a little.
+const WEATHER = { clear: { dim: 0, room: [255, 255, 255], beam: 1 }, overcast: { dim: 0.3, room: [226, 232, 242], beam: 0.12 },
+  rain: { dim: 0.5, room: [205, 215, 232], beam: 0.05 }, snow: { dim: 0.28, room: [238, 243, 252], beam: 0.2 } };
+const WEATHER_ORDER = ['clear', 'overcast', 'rain', 'snow'];
+let weather = params.get('weather') in WEATHER ? params.get('weather') : 'clear';
+const wlevel = Object.fromEntries(WEATHER_ORDER.map((k) => [k, k === weather ? 1 : 0]));   // eased 0..1 per weather
+function stepWeather(dt) { for (const k of WEATHER_ORDER) wlevel[k] += Math.sign((k === weather ? 1 : 0) - wlevel[k]) * Math.min(Math.abs((k === weather ? 1 : 0) - wlevel[k]), dt / 1.5); }
+const wmix = (f) => WEATHER_ORDER.reduce((acc, k) => acc + f(WEATHER[k]) * wlevel[k], 0);
+const wmixRoom = () => [0, 1, 2].map((i) => Math.round(WEATHER_ORDER.reduce((a, k) => a + WEATHER[k].room[i] * wlevel[k], 0)));
+
 const beamBuf = document.createElement('canvas'); beamBuf.width = W * K; beamBuf.height = H * K;
 const bb = beamBuf.getContext('2d');
-function drawSunbeams() {
-  const h = hourNow();
-  const beam = Math.max(0, Math.min(1, 1 - Math.abs(h - 12.5) / 6.5));
-  if (beam <= 0) return;
+function drawSunbeams(L) {
+  const beam = L.beam * wmix((w) => w.beam);
+  if (beam <= 0.005) return;
   bb.imageSmoothingEnabled = false; bb.clearRect(0, 0, W * K, H * K); bb.globalCompositeOperation = 'source-over'; bb.globalAlpha = 1;
   bb.drawImage(sunbeams, 0, 0, W * K, H * K);
-  const low = 1 - Math.min(1, Math.abs(h - 12.5) / 4);              // warm orange tint when the sun is low
-  if (low < 1) { bb.globalCompositeOperation = 'source-atop'; bb.globalAlpha = 0.6 * (1 - low); bb.fillStyle = '#FF8A78'; bb.fillRect(0, 0, W * K, H * K); }
-  b.save(); b.globalAlpha = 0.5 * Math.min(1, beam * 1.6); b.setTransform(1, 0, 0, 1, 0, 0); b.drawImage(beamBuf, 0, 0); b.restore();
+  if (L.warm > 0) { bb.globalCompositeOperation = 'source-atop'; bb.globalAlpha = 0.65 * L.warm; bb.fillStyle = '#FF8A78'; bb.fillRect(0, 0, W * K, H * K); }
+  b.save(); b.globalAlpha = beam; b.setTransform(1, 0, 0, 1, 0, 0); b.drawImage(beamBuf, 0, 0); b.restore();
 }
 
-function drawAmbient() {
-  // Neutral room art + code lighting. Day: soft warm light spilling from the window. Night/dusk: tint the whole room.
+// Lamp glow anchor (room units, the lamp shade on the desk).
+const LAMP = { x: 66, y: 160 };
+function drawAmbient(L) {
   const h = hourNow();
-  const dayness = Math.max(0, Math.min(1, 1 - Math.abs(h - 13) / 5.5));   // 1 at midday, 0 by early morning/evening
-  if (dayness > 0) {
+  const dayness = Math.max(0, Math.min(1, 1 - Math.abs(h - 13) / 5.5)) * (1 - 0.8 * wmix((w) => w.dim));
+  if (dayness > 0) {                                      // soft warm daylight spilling from the window
     const cx = (wx0 + wx1) / 2, g = b.createRadialGradient(cx, wy1, 10, cx, wy1 + 30, 230);
     g.addColorStop(0, `rgba(255,230,170,${0.30 * dayness})`); g.addColorStop(1, 'rgba(255,230,170,0)');
     b.save(); b.globalCompositeOperation = 'screen'; b.fillStyle = g; b.fillRect(0, 0, W, H); b.restore();
   }
-  const [top] = skyAt(h);
-  const night = Math.max(0, Math.min(1, (Math.abs(h - 13) - 5.5) / 3));  // 0 by day, 1 at night
-  if (night > 0) {
-    b.save(); b.globalCompositeOperation = 'multiply';
-    b.fillStyle = `rgba(${mixc([255, 255, 255], [90, 90, 170], night)},1)`; b.fillRect(0, 0, W, H); b.restore();
+  // room tint: time of day x weather, multiplied over everything (scenery included) so plants and furniture at the glass match.
+  const wt = wmixRoom(), tint = [0, 1, 2].map((i) => Math.round(L.tint[i] * wt[i] / 255));
+  b.save(); b.globalCompositeOperation = 'multiply'; b.fillStyle = `rgb(${tint})`; b.fillRect(0, 0, W, H); b.restore();
+  if (L.lamp > 0.01) {                                    // lamp glow: warm pool on the desk, wall and floor
+    const g = b.createRadialGradient(LAMP.x, LAMP.y, 2, LAMP.x, LAMP.y, 70);
+    g.addColorStop(0, `rgba(255,200,120,${0.55 * L.lamp})`); g.addColorStop(0.5, `rgba(255,170,100,${0.18 * L.lamp})`); g.addColorStop(1, 'rgba(255,170,100,0)');
+    b.save(); b.globalCompositeOperation = 'screen'; b.fillStyle = g; b.fillRect(0, 0, W, H); b.restore();
   }
 }
 
 function drawSky() {
-  // Outdoor scenery plate fits the window glass exactly. Time of day tints it for now;
-  // dedicated dusk/night plates replace the tint later.
   b.drawImage(scenery, wx0, wy0, wx1 - wx0, wy1 - wy0);
-  const [top, bot] = skyAt(hourNow());
-  const day = (hourNow() >= 9 && hourNow() <= 17);
-  if (!day) {
-    b.save(); b.beginPath(); b.rect(wx0, wy0, wx1 - wx0, wy1 - wy0); b.clip();
+  const h = hourNow(), [top, bot] = skyAt(h), a = skyTintAlpha(h), dim = wmix((w) => w.dim);
+  b.save(); b.beginPath(); b.rect(wx0, wy0, wx1 - wx0, wy1 - wy0); b.clip();
+  if (a > 0) {
     const g = b.createLinearGradient(0, wy0, 0, wy1);
-    g.addColorStop(0, `rgba(${top},0.62)`); g.addColorStop(1, `rgba(${bot},0.5)`);
-    b.fillStyle = g; b.fillRect(wx0, wy0, wx1 - wx0, wy1 - wy0); b.restore();
+    g.addColorStop(0, `rgba(${top},${a})`); g.addColorStop(1, `rgba(${bot},${a * 0.8})`);
+    b.fillStyle = g; b.fillRect(wx0, wy0, wx1 - wx0, wy1 - wy0);
   }
+  if (dim > 0) { b.fillStyle = `rgba(105,120,146,${dim})`; b.fillRect(wx0, wy0, wx1 - wx0, wy1 - wy0); }
+  b.restore();
+}
+
+// Falling rain and snow, drawn on the 2x buffer in window-glass space. Deterministic particles (no allocation per frame).
+const rng = (n) => { const x = Math.sin(n * 127.1) * 43758.5453; return x - Math.floor(x); };
+function drawPrecip(t) {
+  const gw = wx1 - wx0, gh = wy1 - wy0;
+  b.save(); b.beginPath(); b.rect(wx0, wy0, gw, gh); b.clip();
+  if (wlevel.rain > 0.01) {
+    b.fillStyle = `rgba(215,230,250,${0.9 * wlevel.rain})`;
+    for (let i = 0; i < 170; i++) {
+      const sp = 150 + rng(i + 3) * 80;
+      const px = wx0 + ((rng(i) * gw + t * 30 * (0.5 + rng(i + 5))) % gw), py = wy0 + ((rng(i + 1) * gh + t * sp) % gh);
+      b.fillRect(Math.round(px * K) / K, Math.round(py * K) / K, 1 / K, 5 / K);            // slanted streak, 1 art pixel wide
+      b.fillRect(Math.round((px + 0.5) * K) / K, Math.round((py + 5) * K) / K, 1 / K, 3 / K);
+    }
+  }
+  if (wlevel.snow > 0.01) {
+    for (let i = 0; i < 110; i++) {
+      const sp = 14 + rng(i + 2) * 16, sway = Math.sin(t * (0.6 + rng(i + 4)) + i) * 4;
+      const px = wx0 + ((rng(i) * gw + sway + gw) % gw), py = wy0 + ((rng(i + 1) * gh + t * sp) % gh), big = rng(i + 6) > 0.6 ? 3 : 2;
+      b.fillStyle = `rgba(255,255,255,${(0.55 + 0.4 * rng(i + 7)) * wlevel.snow})`;
+      b.fillRect(Math.round(px * K) / K, Math.round(py * K) / K, big / K * 1, big / K * 1);
+    }
+  }
+  b.restore();
 }
 
 // ---- layout (480x270 room pixels). Floor starts at y=234 (baseboard ends), back wall spans x=37..439. ----
@@ -119,17 +176,27 @@ function frame(ms) {
   const t = ms / 1000;
   b.setTransform(K, 0, 0, K, 0, 0); b.imageSmoothingEnabled = false;   // draw in 480x270 room units
   b.clearRect(0, 0, W, H);
+  const dt = Math.min(0.1, t - (frame.last ?? t)); frame.last = t; stepWeather(dt);
+  const L = lightAt(hourNow());
   drawSky();                  // 2. outdoor scenery, behind the window
+  drawPrecip(t);              // rain / snow outside, behind the frame
   b.drawImage(shell, 0, 0);   // 1+3. room architecture and window frame (window glass is transparent)
-  drawSunbeams();
+  drawSunbeams(L);
   // 4-7: floor rug first, then furniture on top of it (back to front by floor position)
   const dw = (i) => i.width / K, dh = (i) => i.height / K;   // sprites are 2x art, drawn at room units
   b.drawImage(LAYOUT.rug.img, LAYOUT.rug.x, LAYOUT.rug.y, dw(LAYOUT.rug.img), dh(LAYOUT.rug.img));
   for (const k of ['desk', 'bed']) { const L = LAYOUT[k]; b.drawImage(L.shadow, L.x, L.y, dw(L.shadow), dh(L.shadow)); b.drawImage(L.img, L.x, L.y, dw(L.img), dh(L.img)); }
-  drawAmbient();
+  drawAmbient(L);
   // 4-10 (shelves, furniture, plants, rug, kitty, weather) come in later stages
   ctx.imageSmoothingEnabled = false;
   ctx.drawImage(buf, view.ox, view.oy, W * view.s, H * view.s);
   requestAnimationFrame(frame);
 }
 requestAnimationFrame(frame);
+
+// Click the window to change the weather.
+canvas.addEventListener('click', (ev) => {
+  const r = canvas.getBoundingClientRect(), dpr = canvas.width / r.width;
+  const x = ((ev.clientX - r.left) * dpr - view.ox) / view.s, y = ((ev.clientY - r.top) * dpr - view.oy) / view.s;
+  if (x >= wx0 - 8 && x <= wx1 + 8 && y >= wy0 - 8 && y <= wy1 + 8) weather = WEATHER_ORDER[(WEATHER_ORDER.indexOf(weather) + 1) % WEATHER_ORDER.length];
+});
