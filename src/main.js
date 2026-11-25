@@ -97,6 +97,11 @@ function drawAmbient(L) {
 
 function drawSky() {
   b.drawImage(scenery, wx0, wy0, wx1 - wx0, wy1 - wy0);
+  // Extend the scenery's edge pixels 2px under the frame, so no unpainted gap at the glass edge can show through
+  // (that gap was catching the page colour and reading as light specks around the window, unaffected by the lighting).
+  const sw = scenery.width, sh = scenery.height, gw = wx1 - wx0, gh = wy1 - wy0;
+  b.drawImage(scenery, 0, sh - 1, sw, 1, wx0, wy1, gw, 2); b.drawImage(scenery, 0, 0, sw, 1, wx0, wy0 - 2, gw, 2);
+  b.drawImage(scenery, 0, 0, 1, sh, wx0 - 2, wy0, 2, gh); b.drawImage(scenery, sw - 1, 0, 1, sh, wx1, wy0, 2, gh);
   const h = hourNow(), [top, bot] = skyAt(h), a = skyTintAlpha(h), dim = wmix((w) => w.dim);
   b.save(); b.beginPath(); b.rect(wx0, wy0, wx1 - wx0, wy1 - wy0); b.clip();
   if (a > 0) {
