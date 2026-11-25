@@ -9,10 +9,10 @@ const buf = document.createElement('canvas'); buf.width = W; buf.height = H;
 const b = buf.getContext('2d');
 
 const load = (src) => new Promise((res, rej) => { const i = new Image(); i.onload = () => res(i); i.onerror = rej; i.src = src; });
-const [shell, scene] = await Promise.all([load('./art/room-shell.png'), fetch('./art/scene.json').then((r) => r.json())]);
+const [shell, scenery, scene] = await Promise.all([load('./art/room-shell.png'), load('./art/scenery-day.png'), fetch('./art/scene.json').then((r) => r.json())]);
 const [wx0, wy0, wx1, wy1] = scene.window;
 
-// ---- sky (placeholder until the outdoor scenery art exists) ----
+// ---- outdoor scenery ----
 const hex = (h) => [1, 3, 5].map((i) => parseInt(h.slice(i, i + 2), 16));
 const mixc = (a, c, t) => a.map((v, i) => Math.round(v + (c[i] - v) * t));
 const KEYS = [ // hour, top, bottom
@@ -28,21 +28,19 @@ function skyAt(h) {
 }
 const params = new URLSearchParams(location.search);
 const hourNow = () => params.has('hour') ? +params.get('hour') : new Date().getHours() + new Date().getMinutes() / 60;
-const clouds = [{ x: 150, y: 70, w: 34 }, { x: 260, y: 105, w: 26 }, { x: 330, y: 60, w: 40 }];
 
-function drawSky(t) {
+function drawSky() {
+  // Outdoor scenery plate fits the window glass exactly. Time of day tints it for now;
+  // dedicated dusk/night plates replace the tint later.
+  b.drawImage(scenery, wx0, wy0, wx1 - wx0, wy1 - wy0);
   const [top, bot] = skyAt(hourNow());
-  for (let y = wy0; y < wy1; y++) {
-    const c = mixc(top, bot, (y - wy0) / (wy1 - wy0));
-    b.fillStyle = `rgb(${c})`; b.fillRect(wx0, y, wx1 - wx0, 1);
+  const day = (hourNow() >= 9 && hourNow() <= 17);
+  if (!day) {
+    b.save(); b.beginPath(); b.rect(wx0, wy0, wx1 - wx0, wy1 - wy0); b.clip();
+    const g = b.createLinearGradient(0, wy0, 0, wy1);
+    g.addColorStop(0, `rgba(${top},0.62)`); g.addColorStop(1, `rgba(${bot},0.5)`);
+    b.fillStyle = g; b.fillRect(wx0, wy0, wx1 - wx0, wy1 - wy0); b.restore();
   }
-  b.save(); b.beginPath(); b.rect(wx0, wy0, wx1 - wx0, wy1 - wy0); b.clip();
-  b.fillStyle = 'rgba(255,243,222,0.85)';
-  for (const c of clouds) {
-    const x = Math.round(((c.x - wx0 + t * 1.5) % (wx1 - wx0 + 60)) + wx0 - 30);
-    b.fillRect(x + 4, c.y, c.w - 8, 5); b.fillRect(x, c.y + 4, c.w, 5); b.fillRect(x + 8, c.y - 3, c.w / 2, 5);
-  }
-  b.restore();
 }
 
 // ---- viewport ----
@@ -58,7 +56,7 @@ addEventListener('resize', resize); resize();
 function frame(ms) {
   const t = ms / 1000;
   b.clearRect(0, 0, W, H);
-  drawSky(t);                 // 2. outdoor scenery, behind the window
+  drawSky();                  // 2. outdoor scenery, behind the window
   b.drawImage(shell, 0, 0);   // 1+3. room architecture and window frame (window glass is transparent)
   // 4-10 (shelves, furniture, plants, rug, kitty, weather) come in later stages
   ctx.imageSmoothingEnabled = false;
