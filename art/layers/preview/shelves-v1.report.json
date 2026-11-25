@@ -1,0 +1,48 @@
+{
+  "piece": "shelves-v1",
+  "size": [
+    142,
+    99
+  ],
+  "source_px_per_pixel": 10.0,
+  "colours_used": 61,
+  "top_colours": [
+    [
+      "h0010",
+      543
+    ],
+    [
+      "h013",
+      515
+    ],
+    [
+      "h0017",
+      414
+    ],
+    [
+      "h001",
+      375
+    ],
+    [
+      "h009",
+      351
+    ],
+    [
+      "h0019",
+      325
+    ],
+    [
+      "h020",
+      304
+    ],
+    [
+      "h011",
+      290
+    ]
+  ],
+  "off_palette_share": 0.024,
+  "dither_share_before_cleanup": 0.006,
+  "lone_pixels_fixed": 47,
+  "transparent_share": 0.443,
+  "warnings": []
+}

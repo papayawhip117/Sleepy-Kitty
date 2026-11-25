@@ -1,0 +1,48 @@
+{
+  "piece": "desk-v1",
+  "size": [
+    146,
+    157
+  ],
+  "source_px_per_pixel": 5.99,
+  "colours_used": 62,
+  "top_colours": [
+    [
+      "h1115",
+      1710
+    ],
+    [
+      "h0021",
+      1567
+    ],
+    [
+      "h0012",
+      1429
+    ],
+    [
+      "h0020",
+      705
+    ],
+    [
+      "h0016",
+      694
+    ],
+    [
+      "h0018",
+      614
+    ],
+    [
+      "h0022",
+      420
+    ],
+    [
+      "h005",
+      409
+    ]
+  ],
+  "off_palette_share": 0.019,
+  "dither_share_before_cleanup": 0.003,
+  "lone_pixels_fixed": 32,
+  "transparent_share": 0.315,
+  "warnings": []
+}

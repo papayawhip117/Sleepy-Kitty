@@ -1,0 +1,39 @@
+/* The canvas always covers the whole window; the room is cropped, never stretched or letterboxed.
+   The page colour is the room's wood tone so no bar could ever show as black or purple. */
+html, body { margin: 0; width: 100%; height: 100%; overflow: hidden; background: #8a523d; }
+#room { position: fixed; inset: 0; width: 100vw; height: 100vh; height: 100dvh; display: block; image-rendering: pixelated; touch-action: none; }
+
+/* ---- start page and settings ---- */
+:root { --ink: #5a3a4a; --cream: #fff4e6; --blush: #f4b6c2; --rose: #d9748a; --honey: #e8a35e; }
+#start { position: fixed; inset: 0; display: grid; place-items: center; padding: 16px; background: rgba(58, 35, 80, 0.45); opacity: 0; transition: opacity 0.35s; z-index: 10; font-family: 'Press Start 2P', ui-monospace, monospace; }
+#start[hidden] { display: none; }
+#start.open { opacity: 1; }
+#start .card { box-sizing: border-box; width: min(92vw, 520px); background: var(--cream); color: var(--ink); border: 4px solid var(--rose); box-shadow: 0 0 0 4px var(--cream), 0 8px 0 4px rgba(90, 58, 74, 0.35); padding: 28px 24px 22px; text-align: center; image-rendering: pixelated; }
+#start h1 { margin: 0 0 10px; font-size: clamp(20px, 5.2vw, 30px); line-height: 1.3; color: var(--rose); text-shadow: 3px 3px 0 var(--blush); font-weight: normal; }
+#start .sub { margin: 0 0 22px; font-size: 10px; line-height: 1.7; }
+#start .group { margin: 0 0 16px; }
+#start .label { display: block; font-size: 9px; margin-bottom: 8px; color: var(--honey); }
+#start .chips { display: flex; flex-wrap: wrap; justify-content: center; gap: 8px; }
+#start .chip { font: inherit; font-size: 9px; padding: 9px 10px; color: var(--ink); background: #fff; border: 3px solid var(--blush); cursor: pointer; }
+#start .chip:hover { border-color: var(--rose); }
+#start .chip.on { background: var(--blush); border-color: var(--rose); }
+#start .go { margin-top: 8px; font: inherit; font-size: 13px; padding: 14px 22px; color: #fff; background: var(--rose); border: 0; box-shadow: 0 5px 0 #a8506a; cursor: pointer; }
+#start .go:hover { background: #e4879b; }
+#start .go:active { transform: translateY(3px); box-shadow: 0 2px 0 #a8506a; }
+#start .hint { margin: 18px 0 0; font-size: 7px; line-height: 1.9; opacity: 0.8; }
+#start button:focus-visible { outline: 3px solid var(--honey); outline-offset: 2px; }
+#gear { position: fixed; right: 12px; bottom: 12px; width: 36px; height: 36px; border: 3px solid var(--rose); background: rgba(255, 244, 230, 0.85); color: var(--rose); font-size: 18px; line-height: 1; cursor: pointer; opacity: 0.55; z-index: 5; }
+#gear:hover, #gear:focus-visible { opacity: 1; }
+@media (prefers-reduced-motion: reduce) { #start { transition: none; } }
+
+/* title screen: the page is exactly the logo art's cream, so the logo sits on it with no visible box */
+#start.title { background: #fcf3ea; }
+#start .titlebox { display: flex; flex-direction: column; align-items: center; gap: 18px; }
+#start .logo, #start .startbtn img { image-rendering: pixelated; display: block; width: calc(209px * var(--s, 2)); height: auto; max-width: 86vw; }
+#start .startbtn { background: none; border: 0; padding: 0; cursor: pointer; transition: transform 0.1s; }
+#start .startbtn img { width: calc(234px * var(--s, 2)); }
+#start .startbtn:hover { transform: translateY(-2px); }
+#start .startbtn:active { transform: translateY(2px); }
+#start .startbtn:focus-visible { outline: 3px solid var(--honey); outline-offset: 6px; }
+@media (max-width: 560px) { #start { --s: 1; } }
+@media (min-width: 1500px) { #start { --s: 3; } }

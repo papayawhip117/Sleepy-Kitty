@@ -1,0 +1,48 @@
+{
+  "piece": "windowseat-v1",
+  "size": [
+    263,
+    170
+  ],
+  "source_px_per_pixel": 5.55,
+  "colours_used": 61,
+  "top_colours": [
+    [
+      "h021",
+      2519
+    ],
+    [
+      "h070",
+      2334
+    ],
+    [
+      "h1114",
+      2117
+    ],
+    [
+      "h0023",
+      2063
+    ],
+    [
+      "h0111",
+      1640
+    ],
+    [
+      "h0020",
+      1544
+    ],
+    [
+      "h018",
+      1538
+    ],
+    [
+      "h016",
+      1488
+    ]
+  ],
+  "off_palette_share": 0.027,
+  "dither_share_before_cleanup": 0.005,
+  "lone_pixels_fixed": 145,
+  "transparent_share": 0.186,
+  "warnings": []
+}

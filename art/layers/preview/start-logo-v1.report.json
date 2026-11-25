@@ -1,0 +1,48 @@
+{
+  "piece": "start-logo-v1",
+  "size": [
+    68,
+    55
+  ],
+  "source_px_per_pixel": 3.01,
+  "colours_used": 37,
+  "top_colours": [
+    [
+      "h115",
+      459
+    ],
+    [
+      "h114",
+      219
+    ],
+    [
+      "h0113",
+      213
+    ],
+    [
+      "h019",
+      109
+    ],
+    [
+      "h003",
+      53
+    ],
+    [
+      "h116",
+      47
+    ],
+    [
+      "h0112",
+      40
+    ],
+    [
+      "h0015",
+      25
+    ]
+  ],
+  "off_palette_share": 0.004,
+  "dither_share_before_cleanup": 0.016,
+  "lone_pixels_fixed": 6,
+  "transparent_share": 0.654,
+  "warnings": []
+}

@@ -1,0 +1,48 @@
+{
+  "piece": "bed-v4",
+  "size": [
+    380,
+    253
+  ],
+  "source_px_per_pixel": 4.04,
+  "colours_used": 90,
+  "top_colours": [
+    [
+      "h0050",
+      9258
+    ],
+    [
+      "h0110",
+      6417
+    ],
+    [
+      "h104",
+      6255
+    ],
+    [
+      "h0048",
+      5014
+    ],
+    [
+      "h1116",
+      3939
+    ],
+    [
+      "h1119",
+      2750
+    ],
+    [
+      "h1118",
+      2335
+    ],
+    [
+      "h0029",
+      1982
+    ]
+  ],
+  "off_palette_share": 0.015,
+  "dither_share_before_cleanup": 0.003,
+  "lone_pixels_fixed": 149,
+  "transparent_share": 0.363,
+  "warnings": []
+}

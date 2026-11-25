@@ -1,0 +1,7 @@
+{
+  "note": "Glow anchors in shelves-v1 pixels. The game draws a soft flickering glow here (on at night or when the lamp is on).",
+  "lights": [
+    {"name": "lantern", "x": 85, "y": 23, "radius": 14, "colour": "#FFB347"},
+    {"name": "candle-jar", "x": 40, "y": 67, "radius": 8, "colour": "#FFD98A"}
+  ]
+}

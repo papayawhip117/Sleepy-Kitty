@@ -1,0 +1,48 @@
+{
+  "piece": "plant-hanging-v2",
+  "size": [
+    112,
+    202
+  ],
+  "source_px_per_pixel": 3.48,
+  "colours_used": 57,
+  "top_colours": [
+    [
+      "h013",
+      1491
+    ],
+    [
+      "h020",
+      1418
+    ],
+    [
+      "h011",
+      1104
+    ],
+    [
+      "h016",
+      892
+    ],
+    [
+      "h010",
+      882
+    ],
+    [
+      "grey1",
+      582
+    ],
+    [
+      "h021",
+      456
+    ],
+    [
+      "h019",
+      254
+    ]
+  ],
+  "off_palette_share": 0.006,
+  "dither_share_before_cleanup": 0.004,
+  "lone_pixels_fixed": 11,
+  "transparent_share": 0.587,
+  "warnings": []
+}

@@ -1,0 +1,50 @@
+{
+  "piece": "desk-v3",
+  "size": [
+    292,
+    314
+  ],
+  "source_px_per_pixel": 3.0,
+  "colours_used": 92,
+  "top_colours": [
+    [
+      "h0021",
+      5572
+    ],
+    [
+      "h1119",
+      5478
+    ],
+    [
+      "h0049",
+      4524
+    ],
+    [
+      "h0026",
+      2863
+    ],
+    [
+      "h0048",
+      1958
+    ],
+    [
+      "h0010",
+      1772
+    ],
+    [
+      "h1118",
+      1690
+    ],
+    [
+      "h009",
+      1663
+    ]
+  ],
+  "off_palette_share": 0.018,
+  "dither_share_before_cleanup": 0.002,
+  "lone_pixels_fixed": 84,
+  "transparent_share": 0.311,
+  "warnings": [
+    "Source is barely bigger than the target; it may not be real pixel art at this size."
+  ]
+}

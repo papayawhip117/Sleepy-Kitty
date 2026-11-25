@@ -1,0 +1,48 @@
+{
+  "piece": "room-shell-v1",
+  "size": [
+    480,
+    270
+  ],
+  "source_px_per_pixel": 3.48,
+  "colours_used": 42,
+  "top_colours": [
+    [
+      "key",
+      30825
+    ],
+    [
+      "h0020",
+      22808
+    ],
+    [
+      "h0018",
+      17645
+    ],
+    [
+      "h017",
+      9437
+    ],
+    [
+      "h006",
+      5012
+    ],
+    [
+      "h009",
+      4969
+    ],
+    [
+      "h007",
+      4284
+    ],
+    [
+      "h0010",
+      4003
+    ]
+  ],
+  "off_palette_share": 0.004,
+  "dither_share_before_cleanup": 0.003,
+  "lone_pixels_fixed": 392,
+  "transparent_share": 0.0,
+  "warnings": []
+}
