@@ -7,9 +7,10 @@ the sky, weather, time-of-day light, lamp glow, sway and the kitty on top.
 
 - **Native size:** the whole scene is **480×270** true pixels, shown at 4× (1920×1080),
   3× or 8×. Every layer is cut to its true pixel size, so all pieces share one pixel grid.
-- **Palette:** only the colours in `palette/window-kitty.json` (47 colours in 13 ramps,
-  dark to light). Shadows lean plum/violet, highlights lean cream. Import
-  `window-kitty.gpl`, `.hex` or `-1px.png` into Resprite/Aseprite/Lospec tools.
+- **Palette:** only the colours in `palette/window-kitty.json`. Since room-base-v1 it is
+  48 colours extracted from that approved room (`tools/art_palette_from.py`); the first
+  hand-picked palette is kept as `window-kitty.prev.json`. Every later piece is snapped to
+  it so it matches the room. Import `window-kitty.gpl`, `.hex` or `-1px.png` into Resprite.
 - **Light:** warm daylight from the window in the middle of the back wall, so things on the
   left are lit from their right and things on the right are lit from their left.
 - **View:** straight-on, front view of the back wall, a gentle top-down tilt (you can see
