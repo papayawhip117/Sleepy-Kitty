@@ -137,3 +137,5 @@ so it sits against the right side of the room.
   `layers/kitty-sheet.png` with 53x58 cells: sleep 4, blink 5, stretch 5, walk 6 (faces right, mirrored in code),
   held 4 (top-anchored). Frame info is in `layers/kitty-sheet.json`. At 0.17 the face was lost, so the kitty is
   chibi-sized (about 45px long asleep). Mock: `mocks/room-mock-v6.png`.
+- **bed-v2** (ChatGPT edit on flat black, no plushie): replaces bed-v1. Cleaned with `--width 160 --bg auto`,
+  with clean edges and 1.5% off-palette. Mock: `mocks/room-mock-v7.png`.
