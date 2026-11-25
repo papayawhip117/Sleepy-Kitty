@@ -1,0 +1,48 @@
+{
+  "piece": "lamp-off-v1",
+  "size": [
+    45,
+    56
+  ],
+  "source_px_per_pixel": 6.0,
+  "colours_used": 27,
+  "top_colours": [
+    [
+      "h0020",
+      211
+    ],
+    [
+      "h0018",
+      165
+    ],
+    [
+      "h1114",
+      100
+    ],
+    [
+      "h0021",
+      67
+    ],
+    [
+      "h1115",
+      53
+    ],
+    [
+      "h001",
+      46
+    ],
+    [
+      "h002",
+      46
+    ],
+    [
+      "h1113",
+      44
+    ]
+  ],
+  "off_palette_share": 0.002,
+  "dither_share_before_cleanup": 0.008,
+  "lone_pixels_fixed": 6,
+  "transparent_share": 0.654,
+  "warnings": []
+}
