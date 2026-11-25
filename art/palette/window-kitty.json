@@ -1,6 +1,6 @@
 {
   "name": "Window Kitty",
-  "note": "Extracted from room-base-v1.png. Every piece is snapped to these colours.",
+  "note": "Extracted from the approved pieces (room-base-v1, then additions). Every piece is snapped to these colours.",
   "key": "#FF00FF",
   "ramps": {
     "grey": [
@@ -28,15 +28,23 @@
       "#F49868",
       "#E3978E",
       "#F9B47E",
-      "#EEA48E"
+      "#EEA48E",
+      "#EDBABA",
+      "#FACAB8",
+      "#FBD0B8"
     ],
     "h01": [
       "#635A46",
       "#736845",
       "#897445",
+      "#A59C41",
       "#A18147",
       "#C1924D",
-      "#FCD290"
+      "#FCD290",
+      "#FEDFBC",
+      "#FEE3C2",
+      "#FEE6C5",
+      "#FEE8C7"
     ],
     "h09": [
       "#684E6E"
@@ -44,7 +52,8 @@
     "h10": [
       "#81526D",
       "#C632A2",
-      "#96627D"
+      "#96627D",
+      "#B690B4"
     ],
     "h11": [
       "#5B3744",
@@ -61,7 +70,8 @@
       "#BA798A",
       "#CF718D",
       "#CD8486",
-      "#E17A89"
+      "#E17A89",
+      "#DEACC2"
     ]
   }
 }

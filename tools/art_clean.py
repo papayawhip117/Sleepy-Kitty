@@ -101,6 +101,57 @@ def background_mask(rgb, key, auto_bg, tol_key=90, tol_bg=28):
     return mask
 
 
+def grow_mask(rgb_small, step=0.03, halo=0.06, min_blob=12):
+    """Background on a soft gradient/vignette (no flat colour): grow from the border
+    through neighbours whose colour changes only a little per pixel. Then peel halo
+    pixels on the edge and drop tiny specks. Works at native resolution."""
+    h, w, _ = rgb_small.shape
+    lab = to_oklab(rgb_small.reshape(-1, 3).astype(float)).reshape(h, w, 3)
+    d = lambda a, b: np.sqrt(((lab[a] - lab[b]) ** 2).sum())
+    seen = np.zeros((h, w), bool)
+    st = [(y, x) for y in (0, h - 1) for x in range(w)] + [(y, x) for x in (0, w - 1) for y in range(h)]
+    for p in st:
+        seen[p] = True
+    while st:
+        y, x = st.pop()
+        for q in ((y - 1, x), (y + 1, x), (y, x - 1), (y, x + 1)):
+            if 0 <= q[0] < h and 0 <= q[1] < w and not seen[q] and d(q, (y, x)) < step:
+                seen[q] = True
+                st.append(q)
+    for _ in range(2):  # peel soft glow left on the edge
+        peel = []
+        for y in range(h):
+            for x in range(w):
+                if seen[y, x]:
+                    continue
+                nb = [q for q in ((y - 1, x), (y + 1, x), (y, x - 1), (y, x + 1))
+                      if 0 <= q[0] < h and 0 <= q[1] < w and seen[q]]
+                if nb and min(d((y, x), q) for q in nb) < halo:
+                    peel.append((y, x))
+        for p in peel:
+            seen[p] = True
+    lbl = np.zeros((h, w), int)  # drop small opaque specks
+    n = 0
+    for y in range(h):
+        for x in range(w):
+            if seen[y, x] or lbl[y, x]:
+                continue
+            n += 1
+            comp, st = [], [(y, x)]
+            lbl[y, x] = n
+            while st:
+                p = st.pop()
+                comp.append(p)
+                for q in ((p[0] - 1, p[1]), (p[0] + 1, p[1]), (p[0], p[1] - 1), (p[0], p[1] + 1)):
+                    if 0 <= q[0] < h and 0 <= q[1] < w and not seen[q] and not lbl[q]:
+                        lbl[q] = n
+                        st.append(q)
+            if len(comp) < min_blob:
+                for p in comp:
+                    seen[p] = True
+    return seen
+
+
 def downscale(idx, opaque, out_w, out_h):
     """Mode-of-block resample. idx/opaque are full-res; returns low-res index map (-1 = clear)."""
     h, w = idx.shape
@@ -163,7 +214,7 @@ def main():
     ap.add_argument("--width", type=int, required=True, help="true pixel width of the finished piece")
     ap.add_argument("--height", type=int, help="defaults to keeping the aspect ratio")
     ap.add_argument("--aspect", help="centre-crop first, e.g. 16:9 for the room shell")
-    ap.add_argument("--bg", choices=["none", "auto"], default="none", help="auto: remove flat background from the corners")
+    ap.add_argument("--bg", choices=["none", "auto", "grow"], default="none", help="auto: flat background from the corners; grow: soft gradient/vignette background")
     ap.add_argument("--keep-key", action="store_true", help="keep magenta as an opaque colour (window cutout mask)")
     ap.add_argument("--keep-noise", action="store_true")
     ap.add_argument("--name", help="output name, default = source file name")
@@ -196,6 +247,9 @@ def main():
     out_w = a.width
     out_h = a.height or round(img.size[1] * out_w / img.size[0])
     q = downscale(idx, opaque, out_w, out_h)
+    if a.bg == "grow":
+        small = np.array(Image.fromarray(rgb).resize((out_w, out_h), Image.Resampling.BOX))
+        q[grow_mask(small)] = -1
     checker_before = checker_score(q)
     ramp_of = {i: n.rstrip("0123456789") for i, n in enumerate(names)}
     fixed = 0 if a.keep_noise else despeckle(q, ramp_of)
@@ -213,7 +267,8 @@ def main():
     Image.fromarray(out).resize((out_w * 4, out_h * 4), Image.NEAREST).save(od / "preview" / f"{name}@4x.png")
 
     used = Counter(int(v) for v in q[m])
-    src_px = opaque & ~is_key
+    kept = np.array(Image.fromarray((m * 255).astype(np.uint8)).resize(img.size, Image.NEAREST)) > 0
+    src_px = opaque & ~is_key & kept
     off = float((dist[src_px] > 0.06).mean()) if src_px.any() else 0.0
     block = img.size[0] / out_w
     report = {
