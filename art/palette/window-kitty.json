@@ -1,0 +1,20 @@
+{
+  "name": "Window Kitty",
+  "note": "Ramps go dark to light. Shadows lean plum/violet, highlights lean cream. Every asset is snapped to these colors by tools/art_clean.py.",
+  "key": "#FF00FF",
+  "ramps": {
+    "blush":    ["#C9707F", "#E8909E", "#FFB3C1", "#FFD6DC"],
+    "coral":    ["#C2584F", "#FF8A78", "#FFB09E"],
+    "peach":    ["#E0956A", "#FFC59A", "#FFE0C4"],
+    "butter":   ["#E8B24F", "#FFE08A", "#FFF3BE"],
+    "cream":    ["#EFDCC4", "#FFF3DE", "#FFFBF2"],
+    "lavender": ["#7E6BB8", "#9E88D2", "#B9A3E8", "#D9CCF5"],
+    "sky":      ["#6BA4CF", "#9ED0F0", "#CDEBFA"],
+    "sage":     ["#5F8F62", "#8FBF8A", "#BEDDB0"],
+    "leaf":     ["#1F6F54", "#2E8A5C", "#3FA66B", "#6CC47E"],
+    "wood":     ["#4A2A22", "#6B4030", "#8A5A3C", "#B07A4E", "#D2A06A"],
+    "plum":     ["#3A2350", "#5A3A5E", "#7A5677"],
+    "night":    ["#141B3D", "#2B2F6B", "#5B4B9A", "#1B5E5A"],
+    "glow":     ["#E08A2E", "#FFB347", "#FFD98A", "#FF9AAE", "#F4F1FF"]
+  }
+}
