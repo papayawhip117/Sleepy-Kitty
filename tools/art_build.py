@@ -63,7 +63,7 @@ ba = tidy(ba, min_island=30, fringe=lambda a: (xx >= 96) & (yy <= 80) & (hls(a)[
 body = Image.fromarray(ba)
 body.save(OUT / "desk-body.png")
 shutil.copy(SRC / "bed-v3.png", OUT / "bed.png")
-ra = np.array(Image.open(SRC / "rug-v3.png").convert("RGBA"))
+ra = np.array(Image.open(SRC / "rug-v4.png").convert("RGBA"))
 for _ in range(2):                                           # majority filter: smooths the ragged silhouette
     op = (ra[..., 3] > 0).astype(int); pad = np.pad(op, 1)
     cnt = sum(pad[1 + dy:pad.shape[0] - 1 + dy, 1 + dx:pad.shape[1] - 1 + dx] for dy in (-1, 0, 1) for dx in (-1, 0, 1))

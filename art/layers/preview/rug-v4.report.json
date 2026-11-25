@@ -1,0 +1,48 @@
+{
+  "piece": "rug-v4",
+  "size": [
+    232,
+    75
+  ],
+  "source_px_per_pixel": 7.21,
+  "colours_used": 43,
+  "top_colours": [
+    [
+      "h019",
+      3748
+    ],
+    [
+      "h0029",
+      1641
+    ],
+    [
+      "h021",
+      605
+    ],
+    [
+      "h0051",
+      595
+    ],
+    [
+      "h0030",
+      349
+    ],
+    [
+      "h0050",
+      328
+    ],
+    [
+      "h1116",
+      324
+    ],
+    [
+      "h0048",
+      192
+    ]
+  ],
+  "off_palette_share": 0.002,
+  "dither_share_before_cleanup": 0.003,
+  "lone_pixels_fixed": 6,
+  "transparent_share": 0.455,
+  "warnings": []
+}
