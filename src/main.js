@@ -6,7 +6,7 @@ const W = 480, H = 270;
 const canvas = document.getElementById('room');
 const ctx = canvas.getContext('2d');
 const buf = document.createElement('canvas'); buf.width = W; buf.height = H;
-const b = buf.getContext('2d');
+const b = buf.getContext('2d'); b.imageSmoothingEnabled = false;
 
 const load = (src) => new Promise((res, rej) => { const i = new Image(); i.onload = () => res(i); i.onerror = rej; i.src = src; });
 const [shell, scenery, sunbeams, deskImg, bedImg, rugImg, scene] = await Promise.all([load('./art/room-shell.png'), load('./art/scenery-day.png'), load('./art/sunbeams.png'), load('./art/desk-body.png'), load('./art/bed.png'), load('./art/rug.png'), fetch('./art/scene.json').then((r) => r.json())]);
@@ -76,11 +76,28 @@ function drawSky() {
 }
 
 // ---- layout (480x270 room pixels). Floor starts at y=234 (baseboard ends), back wall spans x=37..439. ----
+// One shared floor line: the furniture's lowest feet/hem land on FLOOR_Y. The rug sits flat in the open floor
+// between the desk's right edge (x~183) and the bed's left edge (x~307), toward the foreground.
+const FLOOR_Y = 256;
 const LAYOUT = {
-  rug:  { img: rugImg,  x: 118, y: 234 },   // centred under the window, lies flat on the floor
-  desk: { img: deskImg, x: 40,  y: 140 },   // against the left wall; feet land at y~248, inside the floor band
-  bed:  { img: bedImg,  x: 303, y: 136 },   // pushed into the right corner: the corner is hidden behind the bed (and the frame edge)
+  rug:  { img: rugImg,  x: 181, y: 234 },            // 130x38, centred between desk and bed (centre x=246)
+  desk: { img: deskImg, x: 40,  y: FLOOR_Y - 114 },  // feet end at sprite row 114; left wall
+  bed:  { img: bedImg,  x: 303, y: FLOOR_Y - 123 },  // hem ends at sprite row 123; right corner, edge past the frame
 };
+
+// Contact shadows are built from each sprite's own silhouette (lowest opaque pixel per column), so they follow
+// legs, drawers and the duvet hem exactly. Hard-edged 1px steps, no blur: pixel-art friendly.
+function contactShadow(img) {
+  const c = document.createElement('canvas'); c.width = img.width; c.height = img.height + 7;
+  const g = c.getContext('2d'); g.drawImage(img, 0, 0);
+  const d = g.getImageData(0, 0, c.width, c.height), out = g.createImageData(c.width, c.height);
+  let lowest = 0; const bottom = [];
+  for (let x = 0; x < img.width; x++) { let y = img.height - 1; while (y >= 0 && d.data[(y * c.width + x) * 4 + 3] < 128) y--; bottom.push(y); lowest = Math.max(lowest, y); }
+  bottom.forEach((y, x) => { if (y < lowest - 8) return;           // only columns that actually touch the floor
+    [[-1, 150], [0, 150], [1, 120], [2, 90], [3, 60], [4, 30]].forEach(([dy, a]) => { const o = ((y + dy + 1) * c.width + x) * 4; out.data.set([70, 36, 80, a], o); }); });
+  g.clearRect(0, 0, c.width, c.height); g.putImageData(out, 0, 0); return c;
+}
+for (const k of ['desk', 'bed']) LAYOUT[k].shadow = contactShadow(LAYOUT[k].img);
 
 // ---- viewport ----
 let view = { s: 1, ox: 0, oy: 0 };
@@ -88,7 +105,10 @@ function resize() {
   const dpr = window.devicePixelRatio || 1;
   const vw = document.documentElement.clientWidth || innerWidth, vh = document.documentElement.clientHeight || innerHeight;
   canvas.width = Math.round(vw * dpr); canvas.height = Math.round(vh * dpr);
-  const s = Math.max(canvas.width / W, canvas.height / H); // cover: fill, never stretch
+  const cover = Math.max(canvas.width / W, canvas.height / H);          // smallest scale that fills the window
+  // Whole-number scale keeps every art pixel the same size. Round up only when that crops little extra (<=12%);
+  // otherwise keep the exact cover scale, since going smaller would leave bars.
+  const up = Math.ceil(cover - 1e-6), s = up / cover <= 1.12 ? up : cover;
   view = { s, ox: (canvas.width - W * s) / 2, oy: (canvas.height - H * s) * 0.8 }; // crop mostly ceiling, keep floor for the kitty
 }
 addEventListener('resize', resize); visualViewport?.addEventListener('resize', resize); resize();
@@ -100,7 +120,8 @@ function frame(ms) {
   b.drawImage(shell, 0, 0);   // 1+3. room architecture and window frame (window glass is transparent)
   drawSunbeams();
   // 4-7: floor rug first, then furniture on top of it (back to front by floor position)
-  for (const k of ['rug', 'desk', 'bed']) b.drawImage(LAYOUT[k].img, LAYOUT[k].x, LAYOUT[k].y);
+  b.drawImage(LAYOUT.rug.img, LAYOUT.rug.x, LAYOUT.rug.y);
+  for (const k of ['desk', 'bed']) { const L = LAYOUT[k]; b.drawImage(L.shadow, L.x, L.y); b.drawImage(L.img, L.x, L.y); }
   drawAmbient();
   // 4-10 (shelves, furniture, plants, rug, kitty, weather) come in later stages
   ctx.imageSmoothingEnabled = false;
