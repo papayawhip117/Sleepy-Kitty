@@ -1,3 +1,4 @@
+import { createKitty } from './kitty.js';
 // Window Kitty. The room is authored at 480x270 and drawn from separate layers, back to front.
 // Viewport: the room is scaled uniformly (never stretched) until it covers the whole window, so there is
 // no letterboxing. On a window that is not 16:9, the outer edge of the room is cropped, so the ceiling edge and
@@ -10,8 +11,14 @@ const buf = document.createElement('canvas'); buf.width = W * K; buf.height = H 
 const b = buf.getContext('2d'); b.imageSmoothingEnabled = false;
 
 const load = (src) => new Promise((res, rej) => { const i = new Image(); i.onload = () => res(i); i.onerror = rej; i.src = src; });
-const [shell, scenery, sunbeams, deskImg, bedImg, rugImg, shelvesImg, hangImg, scene, shelfGlow] = await Promise.all([load('./art/room-shell.png'), load('./art/scenery-day.png'), load('./art/sunbeams.png'), load('./art/desk-body.png'), load('./art/bed.png'), load('./art/rug.png'), load('./art/shelves.png'), load('./art/plant-hanging.png'), fetch('./art/scene.json').then((r) => r.json()), fetch('./art/shelves.glow.json').then((r) => r.json())]);
+const [shell, scenery, sunbeams, deskImg, bedImg, rugImg, shelvesImg, hangImg, kittyImg, scene, shelfGlow, kittyMeta] = await Promise.all([load('./art/room-shell.png'), load('./art/scenery-day.png'), load('./art/sunbeams.png'), load('./art/desk-body.png'), load('./art/bed.png'), load('./art/rug.png'), load('./art/shelves.png'), load('./art/plant-hanging.png'), load('./art/kitty.png'), fetch('./art/scene.json').then((r) => r.json()), fetch('./art/shelves.glow.json').then((r) => r.json()), fetch('./art/kitty.json').then((r) => r.json())]);
 const [wx0, wy0, wx1, wy1] = scene.window;
+// Where the kitty may go (feet positions, room units). Floor band is y 234-270; the desk stands on the left and the bed
+// fills the right, so she walks the open middle freely and only in front of the bed on the right.
+const kitty = createKitty(kittyImg, kittyMeta, K, {
+  floor: { x0: 200, x1: 425, y0: 240, y1: 268, bedX: 296, yFront: 262 },
+  bed: { approach: { x: 292, y: 263 }, spot: { x: 372, y: 224 }, spotMin: 340, spotMax: 420, zone: [305, 180, 445, 245] },
+});
 
 // ---- outdoor scenery ----
 const hex = (h) => [1, 3, 5].map((i) => parseInt(h.slice(i, i + 2), 16));
@@ -201,6 +208,7 @@ function frame(ms) {
   const dw = (i) => i.width / K, dh = (i) => i.height / K;   // sprites are 2x art, drawn at room units
   b.drawImage(LAYOUT.rug.img, LAYOUT.rug.x, LAYOUT.rug.y, dw(LAYOUT.rug.img), dh(LAYOUT.rug.img));
   for (const k of ['desk', 'bed']) { const L = LAYOUT[k]; b.drawImage(L.shadow, L.x, L.y, dw(L.shadow), dh(L.shadow)); b.drawImage(L.img, L.x, L.y, dw(L.img), dh(L.img)); }
+  kitty.update(dt, L.lamp); kitty.draw(b);   // 8. the kitty, in front of all furniture, lit by the same ambient pass
   drawAmbient(L);
   // 4-10 (shelves, furniture, plants, rug, kitty, weather) come in later stages
   ctx.imageSmoothingEnabled = false;
@@ -211,7 +219,17 @@ requestAnimationFrame(frame);
 
 // Click the window to change the weather.
 canvas.addEventListener('click', (ev) => {
+  if (suppressClick) { suppressClick = false; return; }
   const r = canvas.getBoundingClientRect(), dpr = canvas.width / r.width;
   const x = ((ev.clientX - r.left) * dpr - view.ox) / view.s, y = ((ev.clientY - r.top) * dpr - view.oy) / view.s;
   if (x >= wx0 - 8 && x <= wx1 + 8 && y >= wy0 - 8 && y <= wy1 + 8) weather = WEATHER_ORDER[(WEATHER_ORDER.indexOf(weather) + 1) % WEATHER_ORDER.length];
 });
+
+// Kitty pointer controls: tap her for a happy reaction, press and drag to pick her up, release to drop her
+// (over the bed she lands on it, otherwise on the floor).
+const toRoom = (ev) => { const r = canvas.getBoundingClientRect(), dpr = canvas.width / r.width; return [((ev.clientX - r.left) * dpr - view.ox) / view.s, ((ev.clientY - r.top) * dpr - view.oy) / view.s]; };
+let suppressClick = false;
+canvas.addEventListener('pointerdown', (ev) => { const [x, y] = toRoom(ev); if (kitty.hit(x, y)) { kitty.down(x, y); suppressClick = true; canvas.setPointerCapture(ev.pointerId); canvas.style.cursor = 'grabbing'; } });
+canvas.addEventListener('pointermove', (ev) => { const [x, y] = toRoom(ev); kitty.move(x, y); if (kitty.k.state !== 'held') canvas.style.cursor = kitty.hit(x, y) ? 'grab' : 'default'; });
+canvas.addEventListener('pointerup', () => { if (kitty.k.state === 'held') { kitty.up(lightAt(hourNow()).lamp); canvas.style.cursor = 'grab'; } });
+if (params.has('debug')) window.kitty = kitty;   // test hook: ?debug

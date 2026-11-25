@@ -83,3 +83,7 @@ Image.fromarray(ra).save(OUT / "rug.png")
 for n, o in (("shelves-v1", "shelves.png"), ("plant-hanging-v2", "plant-hanging.png")):
     Image.fromarray(tidy(np.array(Image.open(SRC / f"{n}.png").convert("RGBA")), min_island=60, spur_passes=1)).save(OUT / o)   # drops floating specks
 shutil.copy(SRC / "shelves-v1.glow.json", OUT / "shelves.glow.json")
+
+# ---- kitty (Stage 4): the 2x sheet, cut from the raw sheet by tools/art_sprites.py (see art/README.md) ----
+shutil.copy(SRC / "kitty-sheet-2x-sheet.png", OUT / "kitty.png")
+shutil.copy(SRC / "kitty-sheet-2x-sheet.json", OUT / "kitty.json")
