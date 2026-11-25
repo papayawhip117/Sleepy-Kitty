@@ -81,7 +81,19 @@ Image.fromarray(ra).save(OUT / "rug.png")
 # ---- wall pieces (Stage 3): the shelf is cut at 0.1 so one art pixel is one 2x-buffer pixel (71x50 room units);
 # the hanging plant is cut at 2x (56x101 room units). Both are cut from the raw sheets in one pass.
 for n, o in (("shelves-v1", "shelves.png"), ("plant-hanging-v2", "plant-hanging.png")):
-    Image.fromarray(tidy(np.array(Image.open(SRC / f"{n}.png").convert("RGBA")), min_island=60, spur_passes=1)).save(OUT / o)   # drops floating specks
+    wa = np.array(Image.open(SRC / f"{n}.png").convert("RGBA"))
+    cream = (wa[..., 0] > 232) & (wa[..., 1] > 222) & (wa[..., 2] > 205) & (wa[..., 3] > 0)   # leftover cream background caught inside leaf gaps and lantern/dome edges
+    if n == "shelves-v1":                                    # keep the white-hot lantern flame and candle glow: they are not background
+        yy, xx = np.mgrid[0:wa.shape[0], 0:wa.shape[1]]
+        for lt in json.load(open(SRC / "shelves-v1.glow.json"))["lights"]:
+            cream &= ((xx - lt["x"]) ** 2 + (yy - lt["y"]) ** 2) > (lt["radius"] * 0.9) ** 2
+    wa[cream, 3] = 0
+    for _ in range(2):                                       # then peel the pale pixels that now touch the new gaps (soft cream rims on leaves)
+        op = wa[..., 3] > 0
+        edge = op & ~(np.roll(op, 1, 0) & np.roll(op, -1, 0) & np.roll(op, 1, 1) & np.roll(op, -1, 1))
+        l_ = (wa[..., :3].astype(int).sum(-1)) / 765
+        wa[edge & (l_ > 0.86) & (wa[..., 1] > wa[..., 2] + 18), 3] = 0   # pale yellow-cream rims only: keeps white lantern glow and glass highlights
+    Image.fromarray(tidy(wa, min_island=70, spur_passes=1)).save(OUT / o)   # drops floating specks
 shutil.copy(SRC / "shelves-v1.glow.json", OUT / "shelves.glow.json")
 
 # ---- kitty (Stage 4): the 2x sheet, cut from the raw sheet by tools/art_sprites.py (see art/README.md) ----

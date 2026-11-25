@@ -210,7 +210,7 @@ function frame(ms) {
   drawPrecip(t);              // rain / snow outside, behind the frame
   b.drawImage(shell, 0, 0);   // 1+3. room architecture and window frame (window glass is transparent)
   drawSunbeams(L);
-  for (const k of ['shelves', 'hang']) { const i = LAYOUT[k].img; b.drawImage(i, LAYOUT[k].x, LAYOUT[k].y, i.width / K, i.height / K); }   // wall decor, behind furniture
+  for (const k of ['shelves', 'hang']) { const i = LAYOUT[k].img; b.drawImage(i, LAYOUT[k].x, LAYOUT[k].y, i.width / K, i.height / K); }   // wall decor, drawn over the sunbeams so the light never washes it out
   // 4-7: floor rug first, then furniture on top of it (back to front by floor position)
   const dw = (i) => i.width / K, dh = (i) => i.height / K;   // sprites are 2x art, drawn at room units
   b.drawImage(LAYOUT.rug.img, LAYOUT.rug.x, LAYOUT.rug.y, dw(LAYOUT.rug.img), dh(LAYOUT.rug.img));

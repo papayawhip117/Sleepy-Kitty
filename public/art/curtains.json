@@ -1,0 +1,18 @@
+{
+ "cell": [
+  180,
+  150
+ ],
+ "frames": 8,
+ "scale": "1 art pixel = 1 room pixel (draw at 2 buffer pixels)",
+ "gap_px_source": [
+  187,
+  354
+ ],
+ "span_source": [
+  54,
+  493
+ ],
+ "rod_y": 5,
+ "header_x": 18
+}
