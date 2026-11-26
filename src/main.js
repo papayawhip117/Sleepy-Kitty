@@ -1,4 +1,5 @@
 import { createKitty } from './kitty.js';
+import { initStudioPanel } from './ui/studioPanel.js';
 // Sleepy Kitty. The room is authored at 480x270 and drawn from separate layers, back to front.
 // Viewport: the room is scaled uniformly (never stretched) until it covers the whole window, so there is
 // no letterboxing. On a window that is not 16:9, the outer edge of the room is cropped, so the ceiling edge and
@@ -306,11 +307,23 @@ function frame(ms) {
 }
 requestAnimationFrame(frame);
 
+// Kitty coats: the white kitty plus four more sheets of the same layout. Choosing one swaps the sheet (saved in settings).
+const COATS = [{ id: 'white', name: 'Snow', img: kittyImg, meta: kittyMeta }];
+for (const [id, name] of [['ginger', 'Ginger'], ['black', 'Midnight'], ['calico', 'Calico'], ['grey', 'Misty']]) {
+  const [img, meta] = await Promise.all([load(`./art/kitty-${id}.png`), fetch(`./art/kitty-${id}.json`).then((r) => r.json())]);
+  COATS.push({ id, name, img, meta });
+}
+const applyCoat = () => { const c = COATS.find((o) => o.id === settings.get('coat')) || COATS[0]; kitty.setSheet(c.img, c.meta); };
+applyCoat(); settings.onChange((k) => { if (k === 'coat') applyCoat(); });
+const studioPanel = initStudioPanel(COATS);
+const LAPTOP_HIT = [94, 154, 137, 190];   // room units around the laptop on the desk
+
 // Click the window to open the environment panel (season, weather, time of day).
 const windowPanel = initWindowPanel();
 canvas.addEventListener('click', (ev) => {
   if (suppressClick) { suppressClick = false; return; }
   { const [lx, ly] = toRoom(ev); if (lx >= LAMP_HIT[0] && lx <= LAMP_HIT[2] && ly >= LAMP_HIT[1] && ly <= LAMP_HIT[3]) { lampOn = !(lampOn ?? lightAt(hourNow()).lamp > 0.5); settings.set('lamp', lampOn); return; } }
+  { const [lx, ly] = toRoom(ev); if (!isCozy() && lx >= LAPTOP_HIT[0] && lx <= LAPTOP_HIT[2] && ly >= LAPTOP_HIT[1] && ly <= LAPTOP_HIT[3]) { studioPanel.toggle(); return; } }
   const r = canvas.getBoundingClientRect(), dpr = canvas.width / r.width;
   const x = ((ev.clientX - r.left) * dpr - view.ox) / view.s, y = ((ev.clientY - r.top) * dpr - view.oy) / view.s;
   if (!isCozy() && x >= wx0 - 8 && x <= wx1 + 8 && y >= wy0 - 8 && y <= wy1 + 8) windowPanel.toggle();

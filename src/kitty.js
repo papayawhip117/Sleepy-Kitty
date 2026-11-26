@@ -3,7 +3,7 @@
 // Position (x, y) is where her feet touch the ground, in 480x270 room units.
 const HEART = [[-1, 0], [1, 0], [-2, 1], [-1, 1], [0, 1], [1, 1], [2, 1], [-1, 2], [0, 2], [1, 2], [0, 3]];   // 5x4 pixel heart
 export function createKitty(img, meta, K, world) {
-  const [cw, ch] = meta.cell, R = (n) => meta.rows[n].row;
+  let [cw, ch] = meta.cell;                                                   // the sheet in use; setSheet() swaps the coat
   const k = { x: 250, y: 252, face: 1, state: 'idle', t: 0, anim: 0, perch: null, hearts: [], vy: 0, held: null, dest: null, next: 3 };
   const rand = (a, b) => a + Math.random() * (b - a);
   const floorClamp = () => { k.x = Math.min(world.floor.x1, Math.max(world.floor.x0, k.x)); k.y = Math.min(world.floor.y1, Math.max(k.x > world.floor.bedX ? world.floor.yFront : world.floor.y0, k.y)); };
@@ -58,7 +58,7 @@ export function createKitty(img, meta, K, world) {
   // which sheet cell to draw
   function cell() {
     switch (k.state) {
-      case 'walk': return ['walk', Math.floor(k.t * 9) % 6];
+      case 'walk': return ['walk', Math.floor(k.t * 9) % meta.rows.walk.frames];
       case 'sleep': return ['sleep', (k.t % 9) > 8 ? 3 : [0, 1, 2, 1][Math.floor(k.t / 1.1) % 4]];
       case 'stretch': return ['stretch', Math.min(4, Math.floor(k.t / (k.dur / 5)))];
       case 'happy': return ['blink', [1, 2, 2, 1, 0][Math.min(4, Math.floor(k.t / 0.25))]];
@@ -75,7 +75,7 @@ export function createKitty(img, meta, K, world) {
   }
   function draw(b) {
     const [row, f0] = cell(), m = meta.rows[row], f = Math.min(f0, m.frames - 1), sx = f * cw, sy = m.row * ch;
-    const flip = k.face < 0 && row !== 'held';
+    const flip = row === 'held' ? false : (row === 'walk' && m.faces === 'left' ? k.face > 0 : k.face < 0);   // walk frames of some coats face left
     const px = k.state === 'held' ? k.held.x : k.x, py = k.state === 'held' ? k.held.y : k.y;
     // soft contact shadow on the ground (hard-edged steps), not when held or in the air
     if (k.state !== 'held') {
@@ -115,6 +115,7 @@ export function createKitty(img, meta, K, world) {
     }
     k.vy = 0; set('fall', 99);
   }
+  function setSheet(newImg, newMeta) { img = newImg; meta = newMeta; [cw, ch] = meta.cell; }
   set('idle', 3);
-  return { k, update, draw, hit, down, move, up };
+  return { k, update, draw, hit, down, move, up, setSheet };
 }

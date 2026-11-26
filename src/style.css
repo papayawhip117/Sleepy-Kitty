@@ -72,3 +72,8 @@ body.cozy #controls, body.cozy #ui-root, body.cozy #start.panel { display: none;
 @media (max-width: 700px) { #start .logo { width: 188px; } #start .startbtn img { width: 232px; } #start .titlebox { gap: 20px; } }
 @media (min-width: 701px) and (max-height: 760px) { #start .logo { width: 283px; } #start .startbtn img { width: 349px; } }
 @media (min-width: 2400px) and (min-height: 1500px) { #start .logo { width: 754px; } #start .startbtn img { width: 930px; } }
+/* Kitty Studio: five coat buttons in a row, each showing the coat at its own pixel size */
+#panel-studio.corner .card { width: min(96vw, 590px); }
+.kpanel .coats .coat { min-width: 0; padding: 8px 6px 6px; }
+.kpanel .coats .coat canvas { width: auto; height: auto; }
+.kpanel .coats .coat .cap { font-size: 7px; }
