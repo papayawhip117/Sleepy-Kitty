@@ -1,6 +1,6 @@
 // One saved-settings object for the whole game (browser localStorage, no accounts). Versioned so later milestones can add keys.
 const KEY = 'sleepy-kitty-settings-v1', OLD = 'window-kitty-settings';
-const DEFAULTS = { time: 'auto', weather: 'clear', season: 'summer', lamp: null, cozy: false,
+const DEFAULTS = { time: 'auto', weather: 'clear', season: 'summer', lamp: null, cozy: false, coat: 'white',
   masterVol: 0.8, muted: false, musicOn: false, musicVol: 0.5, track: 0, rainOn: false, rainVol: 0.5, rainHeavy: false, natureOn: false, natureVol: 0.5 };   // audio is off until the player turns it on   // lamp: null follows the clock, true/false is the player's choice
 let data = { ...DEFAULTS };
 const read = (k) => { try { return JSON.parse(localStorage.getItem(k)); } catch { return null; } };
