@@ -88,7 +88,13 @@ for m, base in ((lit, (226, 168, 160)), (white, (236, 196, 190))):
     off[..., 3][m] = 255
 Image.fromarray(off).save(OUT / "lamp-off.png")
 json.dump({"x": LX0, "y": LY0}, open(OUT / "lamp-off.json", "w"))
-Image.fromarray(tidy(np.array(Image.open(SRC / "bed-v4.png").convert("RGBA")), min_island=160, spur_passes=2)).save(OUT / "bed.png")   # drop stray 1px specks on the duvet edge
+ba = tidy(np.array(Image.open(SRC / "bed-v4.png").convert("RGBA")), min_island=160, spur_passes=2)
+for _ in range(2):                                           # peel the near-white background halo that sits on the outer rim of the bed (2026-11-26 review)
+    op = ba[..., 3] > 0
+    edge = op & ~(np.roll(op, 1, 0) & np.roll(op, -1, 0) & np.roll(op, 1, 1) & np.roll(op, -1, 1))
+    rgb = ba[..., :3].astype(int)
+    ba[edge & (rgb.sum(-1) / 765 > 0.84) & (rgb.max(-1) - rgb.min(-1) < 40), 3] = 0
+Image.fromarray(ba).save(OUT / "bed.png")   # drop stray 1px specks on the duvet edge
 ra = np.array(Image.open(SRC / "rug-v5.png").convert("RGBA"))
 for _ in range(2):                                           # majority filter: smooths the ragged silhouette
     op = (ra[..., 3] > 0).astype(int); pad = np.pad(op, 1)
@@ -113,6 +119,19 @@ for n, o in (("shelves-v1", "shelves.png"), ("plant-hanging-v2", "plant-hanging.
         yy, xx = np.mgrid[0:wa.shape[0], 0:wa.shape[1]]
         for lt in json.load(open(SRC / "shelves-v1.glow.json"))["lights"]:
             cream &= ((xx - lt["x"]) ** 2 + (yy - lt["y"]) ** 2) > (lt["radius"] * 0.9) ** 2
+    if n == "shelves-v1":                                    # only cream connected to the outside is background; cream enclosed in the lantern glass, picture frame or candle jar is real art
+        from collections import deque
+        H, W = cream.shape; bgm = cream | (wa[..., 3] == 0); seen = np.zeros_like(cream); dq = deque()
+        for y in range(H):
+            for x in range(W):
+                if (y in (0, H - 1) or x in (0, W - 1)) and bgm[y, x]: seen[y, x] = True; dq.append((y, x))
+        while dq:
+            y, x = dq.popleft()
+            for yy, xx in ((y + 1, x), (y - 1, x), (y, x + 1), (y, x - 1)):
+                if 0 <= yy < H and 0 <= xx < W and bgm[yy, xx] and not seen[yy, xx]: seen[yy, xx] = True; dq.append((yy, xx))
+        keep = np.zeros_like(cream)
+        for x0, y0, x1, y1 in ((72, 6, 99, 37), (58, 46, 90, 76), (32, 60, 48, 76)): keep[y0:y1, x0:x1] = True
+        cream &= seen | ~keep
     wa[cream, 3] = 0
     for _ in range(2):                                       # then peel the pale pixels that now touch the new gaps (soft cream rims on leaves)
         op = wa[..., 3] > 0
@@ -122,7 +141,56 @@ for n, o in (("shelves-v1", "shelves.png"), ("plant-hanging-v2", "plant-hanging.
     if n == "shelves-v1":                                    # glass dome + mushrooms: the glass was ragged and half-transparent, so the whole display is removed and the shelf top left clear
         wa[0:35, 101:142, 3] = 0
         wa[40:48, 122:142, 3] = 0                            # pale glass reflection under the shelf
-    Image.fromarray(tidy(wa, min_island=70, spur_passes=1)).save(OUT / o)   # drops floating specks
+    wa = tidy(wa, min_island=70, spur_passes=1)              # drops floating specks (before the repairs, which add thin 1px lines)
+    if n == "shelves-v1":                                    # repairs found on review (2026-11-26): lantern ring, dome remnants, diffuser reeds, holes behind the frame
+        wa[10:35, 98:105, 3] = 0                             # thin leftover edge of the removed glass dome
+        copper, dark = wa[9, 84, :3].copy(), wa[12, 77, :3].copy()
+        wa[0:8, 78:95, 3] = 0                                # the lantern ring was half eaten by the background cut: redraw it as a closed loop
+        for y, xs in {1: range(83, 89), 2: (82, 83, 88, 89), 3: (81, 82, 89, 90), 4: (81, 82, 89, 90), 5: (81, 82, 89, 90), 6: (82, 83, 88, 89), 7: range(83, 89)}.items():
+            for x in xs: wa[y, x] = (*copper, 255)
+        wa[48:58, 44:62, 3] = 0                              # diffuser reeds: clear the pieces left over, then draw four reeds from the bottle neck
+        reed = wa[56, 50, :3].copy() if wa[56, 50, 3] else np.array([196, 120, 72], np.uint8)
+        for (x0, y0, x1, y1) in ((51, 57, 46, 49), (52, 57, 50, 48), (53, 57, 55, 48), (54, 57, 59, 49)):
+            for i in range(11):
+                x, y = round(x0 + (x1 - x0) * i / 10), round(y0 + (y1 - y0) * i / 10); wa[y, x] = (*reed, 255)
+        lite = wa[56:68, 54:61, :3].astype(int).sum(-1) > 600; wa[56:68, 54:61, 3][lite] = 0   # pale wall leftover beside the bottle
+        hole = wa[62:72, 79:90]; hole[hole[..., 3] == 0] = (*wa[68, 91, :3], 255)                 # crystal and the gap beside it
+        lite = wa[22:34, 94:99, :3].astype(int).sum(-1) > 620; wa[22:34, 94:99, 3][lite] = 0       # pale glass bit beside the lantern foot
+        from collections import deque                        # any fully enclosed see-through pocket in the lantern, frame, crystal or pot is a hole in the art: fill it from its neighbours
+        H, W = wa.shape[:2]; out = np.zeros((H, W), bool); dq = deque((y, x) for y in range(H) for x in range(W) if (y in (0, H - 1) or x in (0, W - 1)) and wa[y, x, 3] == 0)
+        for y, x in dq: out[y, x] = True
+        while dq:
+            y, x = dq.popleft()
+            for yy, xx in ((y + 1, x), (y - 1, x), (y, x + 1), (y, x - 1)):
+                if 0 <= yy < H and 0 <= xx < W and wa[yy, xx, 3] == 0 and not out[yy, xx]: out[yy, xx] = True; dq.append((yy, xx))
+        for x0, y0, x1, y1 in ((72, 6, 99, 36), (66, 44, 110, 78)):
+            for y in range(y0, y1):
+                for x in range(x0, x1):
+                    if wa[y, x, 3] == 0 and not out[y, x]:
+                        wa[y, x] = next((wa[y, x - d] for d in range(1, 12) if wa[y, x - d, 3]), wa[y, x]) if any(wa[y, x - d, 3] for d in range(1, 12)) else wa[y, x]
+        for _ in range(2):                                   # thin channels to the outside: pixels boxed in on all sides within 6px
+            for y in range(48, 76):
+                for x in range(62, 100):
+                    if wa[y, x, 3]: continue
+                    sides = [any(0 <= y + dy * d < H and 0 <= x + dx * d < W and wa[y + dy * d, x + dx * d, 3] for d in range(1, 7)) for dx, dy in ((1, 0), (-1, 0), (0, 1), (0, -1))]
+                    if sum(sides) >= 4: wa[y, x] = next((wa[y + dy, x + dx] for dx, dy in ((-1, 0), (1, 0), (0, -1), (0, 1)) if wa[y + dy, x + dx, 3]), wa[y, x]); wa[y, x, 3] = 255
+        for x0, y0, x1, y1 in ((63, 50, 90, 73), (93, 62, 107, 74)):   # everything inside the picture frame, crystal and pot is art: grow the neighbours into any remaining see-through pixels
+            for _ in range(12):
+                z = wa[y0:y1, x0:x1]
+                for y in range(z.shape[0]):
+                    for x in range(z.shape[1]):
+                        if z[y, x, 3] < 200:             # fully clear, or the translucent wall-shadow pixels that landed inside the object
+                            nb = [z[y + dy, x + dx] for dx, dy in ((-1, 0), (1, 0), (0, -1), (0, 1)) if 0 <= y + dy < z.shape[0] and 0 <= x + dx < z.shape[1] and z[y + dy, x + dx, 3] >= 200]
+                            if len(nb) >= 2: z[y, x] = nb[0]
+        sub = wa[56:77, 70:111]                              # holes between frame, crystal and pot: fill what is boxed in on all four sides
+        for y in range(sub.shape[0]):
+            for x in range(sub.shape[1]):
+                if sub[y, x, 3]: continue
+                l = next((sub[y, x - d] for d in range(1, 6) if x - d >= 0 and sub[y, x - d, 3]), None)
+                r = any(x + d < sub.shape[1] and sub[y, x + d, 3] for d in range(1, 6))
+                u = any(y - d >= 0 and sub[y - d, x, 3] for d in range(1, 6)); dn = any(y + d < sub.shape[0] and sub[y + d, x, 3] for d in range(1, 6))
+                if l is not None and r and u and dn: sub[y, x] = l
+    Image.fromarray(wa).save(OUT / o)
 shutil.copy(SRC / "shelves-v1.glow.json", OUT / "shelves.glow.json")
 
 # ---- kitty (Stage 4): the 2x sheet, cut from the raw sheet by tools/art_sprites.py (see art/README.md) ----
