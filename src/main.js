@@ -48,7 +48,9 @@ let hourOverride = params.has('hour') ? +params.get('hour') : null;   // null = 
 const hourNow = () => hourOverride ?? new Date().getHours() + new Date().getMinutes() / 60;
 
 let lampEase = null;
-let lampOn = null;   // null = follow the clock, true/false = switched by clicking the desk lamp
+import { settings } from './state/settings.js';
+import { isCozy } from './ui/ui.js';
+let lampOn = settings.get('lamp');   // null = follow the clock, true/false = switched by clicking the desk lamp
 const LAMP_HIT = [44, 136, 92, 172];   // room units around the lamp shade and arm
 // ---- lighting: one neutral room, lit in code ----
 // Every look is a preset on the hour clock, blended smoothly. No second room image is ever needed.
@@ -288,10 +290,10 @@ requestAnimationFrame(frame);
 // Click the window to change the weather.
 canvas.addEventListener('click', (ev) => {
   if (suppressClick) { suppressClick = false; return; }
-  { const [lx, ly] = toRoom(ev); if (lx >= LAMP_HIT[0] && lx <= LAMP_HIT[2] && ly >= LAMP_HIT[1] && ly <= LAMP_HIT[3]) { lampOn = !(lampOn ?? lightAt(hourNow()).lamp > 0.5); return; } }
+  { const [lx, ly] = toRoom(ev); if (lx >= LAMP_HIT[0] && lx <= LAMP_HIT[2] && ly >= LAMP_HIT[1] && ly <= LAMP_HIT[3]) { lampOn = !(lampOn ?? lightAt(hourNow()).lamp > 0.5); settings.set('lamp', lampOn); return; } }
   const r = canvas.getBoundingClientRect(), dpr = canvas.width / r.width;
   const x = ((ev.clientX - r.left) * dpr - view.ox) / view.s, y = ((ev.clientY - r.top) * dpr - view.oy) / view.s;
-  if (x >= wx0 - 8 && x <= wx1 + 8 && y >= wy0 - 8 && y <= wy1 + 8) weather = WEATHER_ORDER[(WEATHER_ORDER.indexOf(weather) + 1) % WEATHER_ORDER.length];
+  if (!isCozy() && x >= wx0 - 8 && x <= wx1 + 8 && y >= wy0 - 8 && y <= wy1 + 8) weather = WEATHER_ORDER[(WEATHER_ORDER.indexOf(weather) + 1) % WEATHER_ORDER.length];
 });
 
 // Kitty pointer controls: tap her for a happy reaction, press and drag to pick her up, release to drop her
