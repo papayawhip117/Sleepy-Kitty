@@ -29,7 +29,8 @@ export function createKitty(img, meta, K, world) {
     set('hop', dur);
   }
   function update(dt, night) {
-    k.t += dt;
+    k.t += dt; k.clock = (k.clock || 0) + dt;
+    if (k.clock >= (k.nextBlink ?? 2.5)) { k.blinkStart = k.clock; k.nextBlink = k.clock + (Math.random() < 0.2 ? rand(0.35, 0.6) : rand(2.2, 6.5)); }   // irregular blinks, sometimes a quick double
     for (const h of k.hearts) { h.t += dt; }
     k.hearts = k.hearts.filter((h) => h.t < 1.4);
     if (k.state === 'held') return;
@@ -64,7 +65,7 @@ export function createKitty(img, meta, K, world) {
       case 'hop': return ['stretch', k.hop.t / k.hop.dur < 0.5 ? 2 : 3];
       case 'fall': return ['held', 1];
       case 'held': return ['held', Math.floor(k.t * 3) % 4];
-      default: return ['blink', (k.t % 4.2) > 4.0 ? 1 : 0];                 // idle: eyes open, blinks now and then
+      default: { const bt = (k.clock || 0) - (k.blinkStart ?? -9); return ['blink', bt < 0.07 ? 1 : bt < 0.17 ? 2 : bt < 0.24 ? 1 : 0]; }   // idle: eyes open, an irregular blink
     }
   }
   function rect() {                                                           // current frame bounds in room units
@@ -107,7 +108,11 @@ export function createKitty(img, meta, K, world) {
     const pn = perchAt(k.x, h.y + 6);   // judged by where the pointer is let go
     k.landPerch = pn || null;
     if (pn) { k.x = Math.min(P[pn].spotMax, Math.max(P[pn].spotMin, k.x)); k.fallTo = P[pn].spot.y; k.y = Math.min(k.y, k.fallTo - 4); }
-    else { floorClamp(); k.fallTo = k.y < world.floor.y0 ? Math.min(world.floor.y1, Math.max(world.floor.y0, k.y + 30)) : k.y; k.y = Math.min(k.y, k.fallTo - 4); }
+    else {                                                                   // not a bed, sill or floor spot: she drops from where she was let go onto the nearest floor spot
+      const startY = h.y + 6; floorClamp();
+      k.fallTo = Math.max(k.y, k.x > world.floor.bedX ? world.floor.yFront : world.floor.y0);
+      k.y = Math.min(startY, k.fallTo - 4);
+    }
     k.vy = 0; set('fall', 99);
   }
   set('idle', 3);

@@ -60,8 +60,34 @@ l_, s_ = hls(ba)
 pale_pink = (l_ > 0.72) & (ba[..., 0] > ba[..., 1])
 ba[pale_pink & (yy >= 176) & ((xx < 180) | (xx > 260) | (yy >= 208)), 3] = 0   # floor-shadow specks (blanket sits x90-130, y<104)
 ba = tidy(ba, min_island=120, fringe=lambda a: (xx >= 192) & (yy <= 160) & (hls(a)[0] > 0.72))  # cream fringe on the leaves
+# desk plant: the two top leaves were cut flat by the original sheet's edge; round their tops and outline them
+for (x0, x1) in ((217, 246), (247, 276)):                    # leaf spans at the flat row (body coords)
+    ba[22:31, 275:280, 3] = 0; ba[19:23, 255:275, 3] = 0                                    # stray tip above the right leaf
+    for y, trim in ((23, 13), (24, 13), (25, 9), (26, 9), (27, 5), (28, 5), (29, 2), (30, 2)):
+        ba[y, x0:x0 + trim, 3] = 0; ba[y, x1 - trim:x1, 3] = 0
+    for x in range(x0, x1):
+        col = np.nonzero(ba[19:32, x, 3])[0]
+        if len(col):
+            y = 19 + col[0]
+            if y >= 23:
+                ba[y, x] = (82, 79, 69, 255)                 # leaf outline colour used elsewhere on the plant
+ba[2:7, 36:50, 3] = 0                                        # olive stub of a vine above the lamp arm
 body = Image.fromarray(ba)
 body.save(OUT / "desk-body.png")
+# lamp OFF: an overlay for the lit inside of the shade (lamp ON is the art as painted); only the glowing pixels are recoloured
+LX0, LY0, LX1, LY1 = 40, 22, 96, 50
+reg = ba[LY0:LY1, LX0:LX1].copy()
+r_, g_, b_ = (reg[..., i].astype(int) for i in range(3))
+lit = (reg[..., 3] > 0) & (r_ > 235) & (g_ > 165) & (b_ < 215) & (g_ > b_ + 20)       # the yellow-orange glow and the white-hot bulb
+white = (reg[..., 3] > 0) & (r_ > 240) & (g_ > 235) & (b_ > 215)
+off = np.zeros_like(reg)
+lum = (r_ * 0.3 + g_ * 0.59 + b_ * 0.11) / 255
+for m, base in ((lit, (226, 168, 160)), (white, (236, 196, 190))):
+    for c in range(3):
+        off[..., c][m] = np.clip(np.array(base[c]) * (0.8 + 0.3 * lum[m]), 0, 255)
+    off[..., 3][m] = 255
+Image.fromarray(off).save(OUT / "lamp-off.png")
+json.dump({"x": LX0, "y": LY0}, open(OUT / "lamp-off.json", "w"))
 Image.fromarray(tidy(np.array(Image.open(SRC / "bed-v4.png").convert("RGBA")), min_island=160, spur_passes=2)).save(OUT / "bed.png")   # drop stray 1px specks on the duvet edge
 ra = np.array(Image.open(SRC / "rug-v5.png").convert("RGBA"))
 for _ in range(2):                                           # majority filter: smooths the ragged silhouette
@@ -93,6 +119,9 @@ for n, o in (("shelves-v1", "shelves.png"), ("plant-hanging-v2", "plant-hanging.
         edge = op & ~(np.roll(op, 1, 0) & np.roll(op, -1, 0) & np.roll(op, 1, 1) & np.roll(op, -1, 1))
         l_ = (wa[..., :3].astype(int).sum(-1)) / 765
         wa[edge & (l_ > 0.86) & (wa[..., 1] > wa[..., 2] + 18), 3] = 0   # pale yellow-cream rims only: keeps white lantern glow and glass highlights
+    if n == "shelves-v1":                                    # glass dome + mushrooms: the glass was ragged and half-transparent, so the whole display is removed and the shelf top left clear
+        wa[0:35, 101:142, 3] = 0
+        wa[40:48, 122:142, 3] = 0                            # pale glass reflection under the shelf
     Image.fromarray(tidy(wa, min_island=70, spur_passes=1)).save(OUT / o)   # drops floating specks
 shutil.copy(SRC / "shelves-v1.glow.json", OUT / "shelves.glow.json")
 
@@ -106,6 +135,18 @@ ka = tidy(ka, min_island=10, spur_passes=0)                  # keep whiskers; dr
 Image.fromarray(ka).save(OUT / "kitty.png")
 shutil.copy(SRC / "kitty-sheet-2x-sheet.json", OUT / "kitty.json")
 
-# ---- start page art (Cody's own title art, cut from his screenshot; shown at a whole-number scale, never resampled) ----
-shutil.copy(SRC / "start-logo-v2.png", OUT / "start-logo.png")
-shutil.copy(SRC / "start-button-v2.png", OUT / "start-button.png")
+# ---- start page art: Cody's original title screen (art/raw/title-screen-v2.png, 1672x941). The logo and the button are cut out
+# at full size (no resampling) with the cream page colour keyed to transparent; a 2:1 box-filtered half-size copy of each is made for
+# narrow screens. The page background is the same cream (#fcf3e9), so the art sits on it with no visible box. ----
+ts = np.array(Image.open(ROOT / "art" / "raw" / "title-screen-v2.png").convert("RGB")).astype(int)
+cream = np.array([252, 243, 233]); dist = np.abs(ts - cream).sum(-1)
+alpha = np.clip((dist - 8) / 24, 0, 1)                    # soft key: crisp pixel edges stay crisp, noise in the cream goes fully clear
+ts_rgba = np.dstack([ts.clip(0, 255), (alpha * 255).round()]).astype(np.uint8)
+for name, (y0, y1, x0, x1) in {"title-logo": (223, 533, 648, 1025), "title-button": (597, 717, 603, 1068)}.items():
+    crop = ts_rgba[y0:y1, x0:x1]
+    Image.fromarray(crop).save(OUT / f"{name}.png")
+    h, w = crop.shape[0] // 2 * 2, crop.shape[1] // 2 * 2                 # half size: average each 2x2 block (premultiplied)
+    f = crop[:h, :w].astype(float); pa = f[..., 3:4] / 255
+    pm = np.concatenate([f[..., :3] * pa, f[..., 3:4]], -1).reshape(h // 2, 2, w // 2, 2, 4).mean((1, 3))
+    a2 = pm[..., 3:4] / 255; rgb = np.where(a2 > 0, pm[..., :3] / np.maximum(a2, 1e-6), 0)
+    Image.fromarray(np.concatenate([rgb, pm[..., 3:4]], -1).round().clip(0, 255).astype(np.uint8)).save(OUT / f"{name}-half.png")

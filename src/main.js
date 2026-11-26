@@ -8,10 +8,16 @@ const K = 2;   // the room buffer is 2x (960x540): room layers are doubled exact
 const canvas = document.getElementById('room');
 const ctx = canvas.getContext('2d');
 const buf = document.createElement('canvas'); buf.width = W * K; buf.height = H * K;
-const b = buf.getContext('2d'); b.imageSmoothingEnabled = false;
+const roomCtx = buf.getContext('2d'); roomCtx.imageSmoothingEnabled = false;
+let b = roomCtx;   // the context everything draws into; briefly swapped for the sky canvas (see frame)
+const skyCv = document.createElement('canvas'); skyCv.width = W * K; skyCv.height = H * K;
+const skyCtx = skyCv.getContext('2d'); skyCtx.imageSmoothingEnabled = false;
+const snapCv = document.createElement('canvas'); snapCv.width = W * K; snapCv.height = H * K;
+const snapCtx = snapCv.getContext('2d');
+let curTint = [255, 255, 255];
 
 const load = (src) => new Promise((res, rej) => { const i = new Image(); i.onload = () => res(i); i.onerror = rej; i.src = src; });
-const [shell, scenery, sunbeams, deskImg, bedImg, rugImg, shelvesImg, hangImg, kittyImg, curtainImg, rodImg, scene, shelfGlow, kittyMeta, curtainMeta] = await Promise.all([load('./art/room-shell.png'), load('./art/scenery-day.png'), load('./art/sunbeams.png'), load('./art/desk-body.png'), load('./art/bed.png'), load('./art/rug.png'), load('./art/shelves.png'), load('./art/plant-hanging.png'), load('./art/kitty.png'), load('./art/curtains.png'), load('./art/curtains-rod.png'), fetch('./art/scene.json').then((r) => r.json()), fetch('./art/shelves.glow.json').then((r) => r.json()), fetch('./art/kitty.json').then((r) => r.json()), fetch('./art/curtains.json').then((r) => r.json())]);
+const [shell, lampOff, lampOffPos, scenery, sceneryDusk, sceneryNight, sunbeams, deskImg, bedImg, rugImg, shelvesImg, hangImg, kittyImg, curtainImg, rodImg, scene, shelfGlow, kittyMeta, curtainMeta] = await Promise.all([load('./art/room-shell.png'), load('./art/lamp-off.png'), fetch('./art/lamp-off.json').then((r) => r.json()), load('./art/scenery-day.png'), load('./art/scenery-dusk.png'), load('./art/scenery-night.png'), load('./art/sunbeams.png'), load('./art/desk-body.png'), load('./art/bed.png'), load('./art/rug.png'), load('./art/shelves.png'), load('./art/plant-hanging.png'), load('./art/kitty.png'), load('./art/curtains.png'), load('./art/curtains-rod.png'), fetch('./art/scene.json').then((r) => r.json()), fetch('./art/shelves.glow.json').then((r) => r.json()), fetch('./art/kitty.json').then((r) => r.json()), fetch('./art/curtains.json').then((r) => r.json())]);
 const [wx0, wy0, wx1, wy1] = scene.window;
 // Where the kitty may go (feet positions, room units). Floor band is y 234-270; the desk stands on the left and the bed
 // fills the right, so she walks the open middle freely and only in front of the bed on the right.
@@ -41,7 +47,14 @@ const params = new URLSearchParams(location.search);
 let hourOverride = params.has('hour') ? +params.get('hour') : null;   // null = follow the real clock
 const hourNow = () => hourOverride ?? new Date().getHours() + new Date().getMinutes() / 60;
 
-let lampOn = null;   // null = follow the clock, true/false = switched by clicking the desk lamp
+let lampEase = null;
+import { settings } from './state/settings.js';
+import { isCozy } from './ui/ui.js';
+import { seasonPlate, SEASONS } from './scene/seasons.js';
+import { drawLeaves, drawFireflies, drawStars, findStars } from './scene/effects.js';
+import { initWindowPanel } from './ui/windowPanel.js';
+import { initAudio, audioDebug, AUDIO_FILES } from './audio/audio.js';
+let lampOn = settings.get('lamp');   // null = follow the clock, true/false = switched by clicking the desk lamp
 const LAMP_HIT = [44, 136, 92, 172];   // room units around the lamp shade and arm
 // ---- lighting: one neutral room, lit in code ----
 // Every look is a preset on the hour clock, blended smoothly. No second room image is ever needed.
@@ -72,7 +85,14 @@ const WEATHER = { clear: { dim: 0, room: [255, 255, 255], beam: 1 }, overcast: {
   rain: { dim: 0.5, room: [205, 215, 232], beam: 0.05 }, snow: { dim: 0.28, room: [238, 243, 252], beam: 0.2 } };
 const WEATHER_ORDER = ['clear', 'overcast', 'rain', 'snow'];
 let weather = params.get('weather') in WEATHER ? params.get('weather') : 'clear';
+let season = 'summer';
 const wlevel = Object.fromEntries(WEATHER_ORDER.map((k) => [k, k === weather ? 1 : 0]));   // eased 0..1 per weather
+const TIME_HOURS = { morning: 7.5, afternoon: 14, dusk: 18.5, night: 22 };
+function applyEnv() {                                        // the window panel only edits settings; this reads them. URL params win for testing.
+  if (!params.has('hour')) hourOverride = TIME_HOURS[settings.get('time')] ?? null;
+  if (!params.has('weather') && settings.get('weather') in WEATHER) weather = settings.get('weather');
+  season = SEASONS.includes(params.get('season')) ? params.get('season') : SEASONS.includes(settings.get('season')) ? settings.get('season') : 'summer';
+}
 function stepWeather(dt) { for (const k of WEATHER_ORDER) wlevel[k] += Math.sign((k === weather ? 1 : 0) - wlevel[k]) * Math.min(Math.abs((k === weather ? 1 : 0) - wlevel[k]), dt / 1.5); }
 const wmix = (f) => WEATHER_ORDER.reduce((acc, k) => acc + f(WEATHER[k]) * wlevel[k], 0);
 const wmixRoom = () => [0, 1, 2].map((i) => Math.round(WEATHER_ORDER.reduce((a, k) => a + WEATHER[k].room[i] * wlevel[k], 0)));
@@ -100,7 +120,11 @@ function drawAmbient(L) {
   }
   // room tint: time of day x weather, multiplied over everything (scenery included) so plants and furniture at the glass match.
   const wt = wmixRoom(), tint = [0, 1, 2].map((i) => Math.round(L.tint[i] * wt[i] / 255));
-  b.save(); b.globalCompositeOperation = 'multiply'; b.fillStyle = `rgb(${tint})`; b.fillRect(0, 0, W, H); b.restore();
+  curTint = tint;
+  // multiply the room only: remember where the room is opaque, tint, then restore that alpha so the window stays see-through for the sky
+  snapCtx.clearRect(0, 0, W * K, H * K); snapCtx.drawImage(buf, 0, 0);
+  b.save(); b.globalCompositeOperation = 'multiply'; b.fillStyle = `rgb(${tint})`; b.fillRect(0, 0, W, H);
+  b.setTransform(1, 0, 0, 1, 0, 0); b.globalCompositeOperation = 'destination-in'; b.drawImage(snapCv, 0, 0); b.restore();
   if (L.lamp > 0.01) {                                    // shelf lantern and candle glow (anchors are in shelf art pixels)
     for (const l of shelfGlow.lights) {
       const gx = LAYOUT.shelves.x + l.x / K, gy = LAYOUT.shelves.y + l.y / K, r = l.radius / K * 1.8, g = b.createRadialGradient(gx, gy, 1, gx, gy, r);
@@ -110,19 +134,44 @@ function drawAmbient(L) {
   }
   if (L.lamp > 0.01) {                                    // lamp glow: warm pool on the desk, wall and floor
     const g = b.createRadialGradient(LAMP.x, LAMP.y, 2, LAMP.x, LAMP.y, 70);
-    g.addColorStop(0, `rgba(255,200,120,${0.55 * L.lamp})`); g.addColorStop(0.5, `rgba(255,170,100,${0.18 * L.lamp})`); g.addColorStop(1, 'rgba(255,170,100,0)');
+    const ts = performance.now() / 1000, fl = 1 + 0.045 * Math.sin(ts * 2.1) + 0.03 * Math.sin(ts * 5.3 + 1.3) + 0.02 * Math.sin(ts * 11.7);   // gentle, irregular flicker
+    g.addColorStop(0, `rgba(255,200,120,${Math.min(1, 0.55 * L.lamp * fl)})`); g.addColorStop(0.5, `rgba(255,170,100,${0.18 * L.lamp * fl})`); g.addColorStop(1, 'rgba(255,170,100,0)');
     b.save(); b.globalCompositeOperation = 'screen'; b.fillStyle = g; b.fillRect(0, 0, W, H); b.restore();
   }
 }
 
-function drawSky() {
-  b.drawImage(scenery, wx0, wy0, wx1 - wx0, wy1 - wy0);
-  // Extend the scenery's edge pixels 2px under the frame, so no unpainted gap at the glass edge can show through
+// Window views by time of day: day plate, dusk plate (also the dawn glow) and night plate, crossfaded.
+// Returns the weight of each plate [day, dusk, night]; they always sum to 1.
+const smooth = (t) => { t = Math.min(1, Math.max(0, t)); return t * t * (3 - 2 * t); };
+function plateWeights(h) {
+  const dayUp = smooth((h - 5.5) / 2.5) * (1 - smooth((h - 16.5) / 2));           // day: fades in 5:30-8, out 16:30-18:30
+  const night = h < 12 ? 1 - smooth((h - 4) / 2) : smooth((h - 18.5) / 2);         // night: until 4, gone by 6; back 18:30-20:30
+  const day = Math.min(dayUp, 1 - night), dusk = Math.max(0, 1 - day - night);
+  return [day, dusk, night];
+}
+let skyW = [1, 0, 0];
+function drawPlate(img, alpha) {
+  if (alpha <= 0.001) return;
+  b.save(); b.globalAlpha = alpha;
+  b.drawImage(img, wx0, wy0, wx1 - wx0, wy1 - wy0);
+  // Extend the plate's edge pixels 2px under the frame, so no unpainted gap at the glass edge can show through
   // (that gap was catching the page colour and reading as light specks around the window, unaffected by the lighting).
-  const sw = scenery.width, sh = scenery.height, gw = wx1 - wx0, gh = wy1 - wy0;
-  b.drawImage(scenery, 0, sh - 1, sw, 1, wx0, wy1, gw, 2); b.drawImage(scenery, 0, 0, sw, 1, wx0, wy0 - 2, gw, 2);
-  b.drawImage(scenery, 0, 0, 1, sh, wx0 - 2, wy0, 2, gh); b.drawImage(scenery, sw - 1, 0, 1, sh, wx1, wy0, 2, gh);
-  const h = hourNow(), [top, bot] = skyAt(h), a = skyTintAlpha(h), dim = wmix((w) => w.dim);
+  const sw = img.width, sh = img.height, gw = wx1 - wx0, gh = wy1 - wy0;
+  b.drawImage(img, 0, sh - 1, sw, 1, wx0, wy1, gw, 2); b.drawImage(img, 0, 0, sw, 1, wx0, wy0 - 2, gw, 2);
+  b.drawImage(img, 0, 0, 1, sh, wx0 - 2, wy0, 2, gh); b.drawImage(img, sw - 1, 0, 1, sh, wx1, wy0, 2, gh);
+  b.restore();
+}
+const seasonLevel = Object.fromEntries(SEASONS.map((k) => [k, k === 'summer' ? 1 : 0]));   // eased 0..1, so a season change crossfades
+function stepSeason(dt) { for (const k of SEASONS) { const tgt = k === season ? 1 : 0; seasonLevel[k] += Math.sign(tgt - seasonLevel[k]) * Math.min(Math.abs(tgt - seasonLevel[k]), dt / 1.2); } }
+const PLATES = [['day', scenery], ['dusk', sceneryDusk], ['night', sceneryNight]];
+function drawSky() {
+  skyW = plateWeights(hourNow());
+  let acc = 0;
+  PLATES.forEach(([key, img], pi) => SEASONS.forEach((se) => {
+    const w = skyW[pi] * seasonLevel[se]; if (w <= 0.001) return;
+    acc += w; drawPlate(seasonPlate(img, key, se), acc - w <= 0.001 ? 1 : w / acc);
+  }));
+  const h = hourNow(), [top, bot] = skyAt(h), a = skyTintAlpha(h) * 0.12, dim = wmix((w) => w.dim);
   b.save(); b.beginPath(); b.rect(wx0, wy0, wx1 - wx0, wy1 - wy0); b.clip();
   if (a > 0) {
     const g = b.createLinearGradient(0, wy0, 0, wy1);
@@ -135,9 +184,21 @@ function drawSky() {
 
 // Falling rain and snow, drawn on the 2x buffer in window-glass space. Deterministic particles (no allocation per frame).
 const rng = (n) => { const x = Math.sin(n * 127.1) * 43758.5453; return x - Math.floor(x); };
+function tintSky() {
+  b.save(); b.beginPath(); b.rect(wx0 - 2, wy0 - 2, wx1 - wx0 + 4, wy1 - wy0 + 4); b.clip();
+  const k = 0.3 + 0.7 * (skyW[0] + skyW[1] * 0.5);        // the dusk/night plates are already painted dark: the room tint only lightly touches the glass
+  b.globalCompositeOperation = 'multiply'; b.fillStyle = `rgb(${curTint.map((c) => Math.round(255 - (255 - c) * k)).join(',')})`;
+  b.fillRect(wx0 - 2, wy0 - 2, wx1 - wx0 + 4, wy1 - wy0 + 4);
+  b.restore();
+}
+const STARS = findStars(sceneryNight, [wx0, wy0, wx1, wy1]);
 function drawPrecip(t) {
   const gw = wx1 - wx0, gh = wy1 - wy0;
   b.save(); b.beginPath(); b.rect(wx0, wy0, gw, gh); b.clip();
+  const clearSky = 1 - Math.min(1, wlevel.rain + wlevel.snow + wlevel.overcast * 0.6);
+  drawStars(b, K, STARS, t, skyW[2] * clearSky * (1 - seasonLevel.winter * 0.3));
+  drawFireflies(b, K, [wx0, wy0, wx1, wy1], t, skyW[2] * (1 - Math.min(1, wlevel.rain * 1.2 + wlevel.snow)) * (1 - seasonLevel.winter));
+  drawLeaves(b, K, [wx0, wy0, wx1, wy1], t, seasonLevel.autumn * (1 - 0.7 * wlevel.rain) * (1 - wlevel.snow));
   if (wlevel.rain > 0.01) {
     b.fillStyle = `rgba(215,230,250,${0.9 * wlevel.rain})`;
     for (let i = 0; i < 170; i++) {
@@ -201,7 +262,7 @@ addEventListener('resize', resize); visualViewport?.addEventListener('resize', r
 
 // Curtains: 8 hand-drawn sway frames per panel. Each panel runs its own slow, slightly irregular wave, so the left and
 // right sides never move in lockstep. One art pixel = one room pixel (no resampling), hung from a static rod across the glass.
-const CURT = { x0: 112, y: 42, xr: 211, rodX: 112, rodW: 260 };   // panels hang over the window frame's side bars, so they cover as little glass as possible
+const CURT = { x0: 112, y: 35, xr: 211, rodX: 112, rodW: 260 };   // panels hang over the window frame's side bars, so they cover as little glass as possible
 function curtainFrame(t, rate, phase) {
   const gust = 0.65 + 0.35 * Math.sin(t * 0.11 + phase * 1.7);          // slow drift in strength
   const p = 0.5 + 0.5 * Math.sin(t * rate + phase) * gust;
@@ -219,11 +280,10 @@ function frame(ms) {
   const t = ms / 1000;
   b.setTransform(K, 0, 0, K, 0, 0); b.imageSmoothingEnabled = false;   // draw in 480x270 room units
   b.clearRect(0, 0, W, H);
-  const dt = Math.min(0.1, t - (frame.last ?? t)); frame.last = t; stepWeather(dt);
+  const dt = Math.min(0.1, t - (frame.last ?? t)); frame.last = t; stepWeather(dt); stepSeason(dt);
   const L = lightAt(hourNow()), night = L.lamp;       // night (0..1) drives the kitty's habits; the lamp switch only changes the glow
   if (lampOn !== null) L.lamp = lampOn ? 1 : 0;
-  drawSky();                  // 2. outdoor scenery, behind the window
-  drawPrecip(t);              // rain / snow outside, behind the frame
+  lampEase = lampEase ?? L.lamp; lampEase += (L.lamp - lampEase) * Math.min(1, dt * 7); L.lamp = lampEase;   // the lamp fades up and down instead of snapping
   b.drawImage(shell, 0, 0);   // 1+3. room architecture and window frame (window glass is transparent)
   drawSunbeams(L);
   drawCurtains(t);            // 3. curtains at the window, over the sunbeams and behind the furniture
@@ -232,8 +292,13 @@ function frame(ms) {
   const dw = (i) => i.width / K, dh = (i) => i.height / K;   // sprites are 2x art, drawn at room units
   b.drawImage(LAYOUT.rug.img, LAYOUT.rug.x, LAYOUT.rug.y, dw(LAYOUT.rug.img), dh(LAYOUT.rug.img));
   for (const k of ['desk', 'bed']) { const L = LAYOUT[k]; b.drawImage(L.shadow, L.x, L.y, dw(L.shadow), dh(L.shadow)); b.drawImage(L.img, L.x, L.y, dw(L.img), dh(L.img)); }
+  if (L.lamp < 0.99) { b.save(); b.globalAlpha = 1 - L.lamp; b.drawImage(lampOff, LAYOUT.desk.x + lampOffPos.x / K, LAYOUT.desk.y + lampOffPos.y / K, lampOff.width / K, lampOff.height / K); b.restore(); }   // lamp off: the glowing inside of the shade goes dull
   kitty.update(dt, night); kitty.draw(b);   // 8. the kitty, in front of all furniture, lit by the same ambient pass
   drawAmbient(L);
+  // 2. outdoor scenery and weather, drawn last onto its own canvas and slipped in *behind* the room (the window glass is transparent)
+  b = skyCtx; b.setTransform(K, 0, 0, K, 0, 0); b.imageSmoothingEnabled = false; b.clearRect(0, 0, W, H);
+  drawSky(); drawPrecip(t); tintSky();
+  b = roomCtx; b.save(); b.setTransform(1, 0, 0, 1, 0, 0); b.globalCompositeOperation = 'destination-over'; b.drawImage(skyCv, 0, 0); b.restore();
   // 4-10 (shelves, furniture, plants, rug, kitty, weather) come in later stages
   ctx.imageSmoothingEnabled = false;
   ctx.drawImage(buf, view.ox, view.oy, W * view.s, H * view.s);
@@ -241,13 +306,14 @@ function frame(ms) {
 }
 requestAnimationFrame(frame);
 
-// Click the window to change the weather.
+// Click the window to open the environment panel (season, weather, time of day).
+const windowPanel = initWindowPanel();
 canvas.addEventListener('click', (ev) => {
   if (suppressClick) { suppressClick = false; return; }
-  { const [lx, ly] = toRoom(ev); if (lx >= LAMP_HIT[0] && lx <= LAMP_HIT[2] && ly >= LAMP_HIT[1] && ly <= LAMP_HIT[3]) { lampOn = !(lampOn ?? lightAt(hourNow()).lamp > 0.5); return; } }
+  { const [lx, ly] = toRoom(ev); if (lx >= LAMP_HIT[0] && lx <= LAMP_HIT[2] && ly >= LAMP_HIT[1] && ly <= LAMP_HIT[3]) { lampOn = !(lampOn ?? lightAt(hourNow()).lamp > 0.5); settings.set('lamp', lampOn); return; } }
   const r = canvas.getBoundingClientRect(), dpr = canvas.width / r.width;
   const x = ((ev.clientX - r.left) * dpr - view.ox) / view.s, y = ((ev.clientY - r.top) * dpr - view.oy) / view.s;
-  if (x >= wx0 - 8 && x <= wx1 + 8 && y >= wy0 - 8 && y <= wy1 + 8) weather = WEATHER_ORDER[(WEATHER_ORDER.indexOf(weather) + 1) % WEATHER_ORDER.length];
+  if (!isCozy() && x >= wx0 - 8 && x <= wx1 + 8 && y >= wy0 - 8 && y <= wy1 + 8) windowPanel.toggle();
 });
 
 // Kitty pointer controls: tap her for a happy reaction, press and drag to pick her up, release to drop her
@@ -257,13 +323,11 @@ let suppressClick = false;
 canvas.addEventListener('pointerdown', (ev) => { const [x, y] = toRoom(ev); if (kitty.hit(x, y)) { kitty.down(x, y); suppressClick = true; canvas.setPointerCapture(ev.pointerId); canvas.style.cursor = 'grabbing'; } });
 canvas.addEventListener('pointermove', (ev) => { const [x, y] = toRoom(ev); kitty.move(x, y); if (kitty.k.state !== 'held') canvas.style.cursor = kitty.hit(x, y) ? 'grab' : 'default'; });
 canvas.addEventListener('pointerup', () => { if (kitty.k.state === 'held') { kitty.up(lightAt(hourNow()).lamp); canvas.style.cursor = 'grab'; } });
-if (params.has('debug')) window.kitty = kitty;   // test hook: ?debug
+if (params.has('debug')) { window.kitty = kitty; window.audio = audioDebug; window.AUDIO_FILES = AUDIO_FILES; }   // test hook: ?debug
 
 // Start page and settings (src/start.js). Time and weather choices are remembered in this browser.
 import { initStart } from './start.js';
-initStart({
-  setTime: (h) => { hourOverride = h; },
-  setWeather: (w) => { if (w in WEATHER) weather = w; },
-  hasUrlOverrides: params.has('hour') || params.has('weather'),
-  skip: params.has('nostart'),
-});
+applyEnv(); season = SEASONS.includes(season) ? season : 'summer'; for (const k of SEASONS) seasonLevel[k] = k === season ? 1 : 0;
+settings.onChange((k) => { if (['time', 'weather', 'season'].includes(k)) applyEnv(); });
+initAudio(() => ({ hour: hourNow(), rain: weather === 'rain' }));
+initStart({ skip: params.has('nostart') });
