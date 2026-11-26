@@ -71,8 +71,23 @@ for (x0, x1) in ((217, 246), (247, 276)):                    # leaf spans at the
             y = 19 + col[0]
             if y >= 23:
                 ba[y, x] = (82, 79, 69, 255)                 # leaf outline colour used elsewhere on the plant
+ba[2:7, 36:50, 3] = 0                                        # olive stub of a vine above the lamp arm
 body = Image.fromarray(ba)
 body.save(OUT / "desk-body.png")
+# lamp OFF: an overlay for the lit inside of the shade (lamp ON is the art as painted); only the glowing pixels are recoloured
+LX0, LY0, LX1, LY1 = 40, 22, 96, 50
+reg = ba[LY0:LY1, LX0:LX1].copy()
+r_, g_, b_ = (reg[..., i].astype(int) for i in range(3))
+lit = (reg[..., 3] > 0) & (r_ > 235) & (g_ > 165) & (b_ < 215) & (g_ > b_ + 20)       # the yellow-orange glow and the white-hot bulb
+white = (reg[..., 3] > 0) & (r_ > 240) & (g_ > 235) & (b_ > 215)
+off = np.zeros_like(reg)
+lum = (r_ * 0.3 + g_ * 0.59 + b_ * 0.11) / 255
+for m, base in ((lit, (226, 168, 160)), (white, (236, 196, 190))):
+    for c in range(3):
+        off[..., c][m] = np.clip(np.array(base[c]) * (0.8 + 0.3 * lum[m]), 0, 255)
+    off[..., 3][m] = 255
+Image.fromarray(off).save(OUT / "lamp-off.png")
+json.dump({"x": LX0, "y": LY0}, open(OUT / "lamp-off.json", "w"))
 Image.fromarray(tidy(np.array(Image.open(SRC / "bed-v4.png").convert("RGBA")), min_island=160, spur_passes=2)).save(OUT / "bed.png")   # drop stray 1px specks on the duvet edge
 ra = np.array(Image.open(SRC / "rug-v5.png").convert("RGBA"))
 for _ in range(2):                                           # majority filter: smooths the ragged silhouette

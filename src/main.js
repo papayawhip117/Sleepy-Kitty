@@ -17,7 +17,7 @@ const snapCtx = snapCv.getContext('2d');
 let curTint = [255, 255, 255];
 
 const load = (src) => new Promise((res, rej) => { const i = new Image(); i.onload = () => res(i); i.onerror = rej; i.src = src; });
-const [shell, scenery, sceneryDusk, sceneryNight, sunbeams, deskImg, bedImg, rugImg, shelvesImg, hangImg, kittyImg, curtainImg, rodImg, scene, shelfGlow, kittyMeta, curtainMeta] = await Promise.all([load('./art/room-shell.png'), load('./art/scenery-day.png'), load('./art/scenery-dusk.png'), load('./art/scenery-night.png'), load('./art/sunbeams.png'), load('./art/desk-body.png'), load('./art/bed.png'), load('./art/rug.png'), load('./art/shelves.png'), load('./art/plant-hanging.png'), load('./art/kitty.png'), load('./art/curtains.png'), load('./art/curtains-rod.png'), fetch('./art/scene.json').then((r) => r.json()), fetch('./art/shelves.glow.json').then((r) => r.json()), fetch('./art/kitty.json').then((r) => r.json()), fetch('./art/curtains.json').then((r) => r.json())]);
+const [shell, lampOff, lampOffPos, scenery, sceneryDusk, sceneryNight, sunbeams, deskImg, bedImg, rugImg, shelvesImg, hangImg, kittyImg, curtainImg, rodImg, scene, shelfGlow, kittyMeta, curtainMeta] = await Promise.all([load('./art/room-shell.png'), load('./art/lamp-off.png'), fetch('./art/lamp-off.json').then((r) => r.json()), load('./art/scenery-day.png'), load('./art/scenery-dusk.png'), load('./art/scenery-night.png'), load('./art/sunbeams.png'), load('./art/desk-body.png'), load('./art/bed.png'), load('./art/rug.png'), load('./art/shelves.png'), load('./art/plant-hanging.png'), load('./art/kitty.png'), load('./art/curtains.png'), load('./art/curtains-rod.png'), fetch('./art/scene.json').then((r) => r.json()), fetch('./art/shelves.glow.json').then((r) => r.json()), fetch('./art/kitty.json').then((r) => r.json()), fetch('./art/curtains.json').then((r) => r.json())]);
 const [wx0, wy0, wx1, wy1] = scene.window;
 // Where the kitty may go (feet positions, room units). Floor band is y 234-270; the desk stands on the left and the bed
 // fills the right, so she walks the open middle freely and only in front of the bed on the right.
@@ -47,6 +47,7 @@ const params = new URLSearchParams(location.search);
 let hourOverride = params.has('hour') ? +params.get('hour') : null;   // null = follow the real clock
 const hourNow = () => hourOverride ?? new Date().getHours() + new Date().getMinutes() / 60;
 
+let lampEase = null;
 let lampOn = null;   // null = follow the clock, true/false = switched by clicking the desk lamp
 const LAMP_HIT = [44, 136, 92, 172];   // room units around the lamp shade and arm
 // ---- lighting: one neutral room, lit in code ----
@@ -120,7 +121,8 @@ function drawAmbient(L) {
   }
   if (L.lamp > 0.01) {                                    // lamp glow: warm pool on the desk, wall and floor
     const g = b.createRadialGradient(LAMP.x, LAMP.y, 2, LAMP.x, LAMP.y, 70);
-    g.addColorStop(0, `rgba(255,200,120,${0.55 * L.lamp})`); g.addColorStop(0.5, `rgba(255,170,100,${0.18 * L.lamp})`); g.addColorStop(1, 'rgba(255,170,100,0)');
+    const ts = performance.now() / 1000, fl = 1 + 0.045 * Math.sin(ts * 2.1) + 0.03 * Math.sin(ts * 5.3 + 1.3) + 0.02 * Math.sin(ts * 11.7);   // gentle, irregular flicker
+    g.addColorStop(0, `rgba(255,200,120,${Math.min(1, 0.55 * L.lamp * fl)})`); g.addColorStop(0.5, `rgba(255,170,100,${0.18 * L.lamp * fl})`); g.addColorStop(1, 'rgba(255,170,100,0)');
     b.save(); b.globalCompositeOperation = 'screen'; b.fillStyle = g; b.fillRect(0, 0, W, H); b.restore();
   }
 }
@@ -260,6 +262,7 @@ function frame(ms) {
   const dt = Math.min(0.1, t - (frame.last ?? t)); frame.last = t; stepWeather(dt);
   const L = lightAt(hourNow()), night = L.lamp;       // night (0..1) drives the kitty's habits; the lamp switch only changes the glow
   if (lampOn !== null) L.lamp = lampOn ? 1 : 0;
+  lampEase = lampEase ?? L.lamp; lampEase += (L.lamp - lampEase) * Math.min(1, dt * 7); L.lamp = lampEase;   // the lamp fades up and down instead of snapping
   b.drawImage(shell, 0, 0);   // 1+3. room architecture and window frame (window glass is transparent)
   drawSunbeams(L);
   drawCurtains(t);            // 3. curtains at the window, over the sunbeams and behind the furniture
@@ -268,6 +271,7 @@ function frame(ms) {
   const dw = (i) => i.width / K, dh = (i) => i.height / K;   // sprites are 2x art, drawn at room units
   b.drawImage(LAYOUT.rug.img, LAYOUT.rug.x, LAYOUT.rug.y, dw(LAYOUT.rug.img), dh(LAYOUT.rug.img));
   for (const k of ['desk', 'bed']) { const L = LAYOUT[k]; b.drawImage(L.shadow, L.x, L.y, dw(L.shadow), dh(L.shadow)); b.drawImage(L.img, L.x, L.y, dw(L.img), dh(L.img)); }
+  if (L.lamp < 0.99) { b.save(); b.globalAlpha = 1 - L.lamp; b.drawImage(lampOff, LAYOUT.desk.x + lampOffPos.x / K, LAYOUT.desk.y + lampOffPos.y / K, lampOff.width / K, lampOff.height / K); b.restore(); }   // lamp off: the glowing inside of the shade goes dull
   kitty.update(dt, night); kitty.draw(b);   // 8. the kitty, in front of all furniture, lit by the same ambient pass
   drawAmbient(L);
   // 2. outdoor scenery and weather, drawn last onto its own canvas and slipped in *behind* the room (the window glass is transparent)
