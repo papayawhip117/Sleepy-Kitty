@@ -21,6 +21,7 @@ export function initAudioPanel() {
       const note = body.querySelector('#audionote');
       const refresh = () => { note.textContent = (audioRunning() ? '' : 'Sound starts after your first tap or key press. ') + (usingFiles() ? '' : 'These sounds are placeholders made in code.'); };
       refresh(); setTimeout(refresh, 400);
+      const tick = setInterval(() => { if (p.isOpen) body.querySelector('#trackname').textContent = currentTrack(); else clearInterval(tick); }, 1500);
       body.querySelectorAll('[data-tog]').forEach((b) => b.addEventListener('click', () => { const k = b.dataset.tog, v = !settings.get(k); settings.set(k, v); b.classList.toggle('on', v); b.setAttribute('aria-pressed', v); setTimeout(refresh, 300); }));
       body.querySelectorAll('[data-vol]').forEach((r) => r.addEventListener('input', () => settings.set(r.dataset.vol, r.value / 100)));
       body.querySelector('#prev').addEventListener('click', () => { nextTrack(-1); body.querySelector('#trackname').textContent = currentTrack(); });

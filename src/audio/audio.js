@@ -15,6 +15,7 @@ const TRACKS = [   // placeholder lo-fi loops, generated: chords as MIDI notes
   { name: 'Warm blanket', bpm: 70, chords: [[48, 52, 55, 59], [45, 48, 52, 55], [53, 57, 60, 64], [43, 47, 50, 53]] },
 ];
 export const trackNames = () => (AUDIO_FILES.music.length ? AUDIO_FILES.music : TRACKS).map((t) => t.name);
+export const fileMode = () => AUDIO_FILES.music.length > 0;
 const mtof = (m) => 440 * 2 ** ((m - 69) / 12);
 
 let ctx = null, master = null, bus = {}, noiseBuf = null, started = false, getEnv = () => ({ hour: 12, rain: false });
@@ -131,12 +132,43 @@ function startMusic() {
   if (sched) return; buildMusic(); step = 0; nextT = ctx.currentTime + 0.1; scheduleMusic(); sched = setInterval(scheduleMusic, 100);
 }
 function stopMusic() { clearInterval(sched); sched = null; }
-let fileMusic = null;
-function startFileMusic() {
-  const list = AUDIO_FILES.music; if (fileMusic || !list.length) return;
-  const el = new Audio(list[trackIdx % list.length].url); el.loop = true; const src = ctx.createMediaElementSource(el); src.connect(bus.music); el.play().catch(() => {}); fileMusic = el;
+// ---- real music files: a shuffled playlist with a crossfade between tracks ----
+// Two audio elements take turns. A shuffle "bag" plays every track once in random order before reshuffling, and never starts a new
+// round with the track that just played, so a long session does not repeat the same songs back to back.
+const XFADE = 4;                              // seconds of overlap between tracks
+let pl = null;                                // { els: [{el, gain}], cur, order, pos, history, playing }
+const fileList = () => AUDIO_FILES.music;
+function shuffleBag(last) {
+  const o = fileList().map((_, i) => i); for (let i = o.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); [o[i], o[j]] = [o[j], o[i]]; }
+  if (o.length > 1 && o[0] === last) [o[0], o[1]] = [o[1], o[0]];
+  return o;
 }
-function stopFileMusic() { fileMusic?.pause(); fileMusic = null; }
+function ensurePlayer() {
+  if (pl) return pl;
+  pl = { els: [0, 1].map(() => { const el = new Audio(); el.preload = 'auto'; el.crossOrigin = 'anonymous'; const g = ctx.createGain(); g.gain.value = 0; ctx.createMediaElementSource(el).connect(g); g.connect(bus.music); return { el, gain: g }; }),
+    cur: 0, order: shuffleBag(-1), pos: -1, history: [], playing: false, fails: 0 };
+  pl.els.forEach((e, i) => { e.el.addEventListener('timeupdate', () => { if (pl.playing && i === pl.cur && e.el.duration && e.el.duration - e.el.currentTime < XFADE && !pl.fading) advance(1); }); e.el.addEventListener('ended', () => { if (pl.playing && i === pl.cur) advance(1); });
+    e.el.addEventListener('error', () => { if (pl.playing && i === pl.cur && ++pl.fails < fileList().length) advance(1); }); });
+  return pl;
+}
+function playIndex(idx, fade) {
+  const p = pl, from = p.els[p.cur], to = p.els[1 - p.cur]; p.cur = 1 - p.cur; p.fading = true; setTimeout(() => { p.fading = false; }, XFADE * 1000);
+  to.el.src = fileList()[idx].url; to.el.currentTime = 0; to.el.play().then(() => { p.fails = 0; }).catch(() => {});
+  const t = ctx.currentTime; to.gain.gain.cancelScheduledValues(t); to.gain.gain.setValueAtTime(fade ? 0 : 1, t); if (fade) to.gain.gain.linearRampToValueAtTime(1, t + XFADE);
+  from.gain.gain.cancelScheduledValues(t); from.gain.gain.setValueAtTime(from.gain.gain.value, t); from.gain.gain.linearRampToValueAtTime(0, t + (fade ? XFADE : 0.4)); setTimeout(() => { if (p.els[p.cur] !== from) from.el.pause(); }, (fade ? XFADE : 0.4) * 1000 + 100);
+  p.nowPlaying = idx;
+}
+function advance(dir) {
+  const p = ensurePlayer(), n = fileList().length; if (!n) return;
+  if (dir < 0 && p.history.length > 1) { p.history.pop(); const idx = p.history[p.history.length - 1]; playIndex(idx, false); return; }
+  p.pos++; if (p.pos >= p.order.length) { p.order = shuffleBag(p.nowPlaying); p.pos = 0; }
+  const idx = p.order[p.pos]; p.history.push(idx); if (p.history.length > 30) p.history.shift(); playIndex(idx, p.playing && dir > 0 && p.history.length > 1);
+}
+function startFileMusic() {
+  if (!fileList().length) return; const p = ensurePlayer(); if (p.playing) return; p.playing = true;
+  const cur = p.els[p.cur]; if (cur.el.src && cur.el.paused && p.nowPlaying !== undefined) { cur.el.play().catch(() => {}); cur.gain.gain.setTargetAtTime(1, ctx.currentTime, 0.2); } else advance(1);
+}
+function stopFileMusic() { if (!pl) return; pl.playing = false; pl.els.forEach((e) => { e.el.pause(); }); }
 
 // ---- apply the settings to the graph (idempotent: never builds a second copy of anything) ----
 function applyAll() {
@@ -162,11 +194,11 @@ export function initAudio(envGetter) {
   setInterval(() => { if (ctx && settings.get('natureOn')) applyAll(); }, 20000);   // day birds / night crickets follow the clock
   document.addEventListener('visibilitychange', () => { if (!document.hidden && ctx) ctx.resume(); });
 }
-export const nextTrack = (d) => { const n = trackNames().length; trackIdx = (trackIdx + d + n) % n; settings.set('track', trackIdx); if (sched) { stopMusic(); startMusic(); } if (fileMusic) { stopFileMusic(); startFileMusic(); } };
-export const currentTrack = () => trackNames()[trackIdx % trackNames().length];
+export const nextTrack = (d) => { if (fileMode()) { if (pl?.playing) advance(d); return; } const n = trackNames().length; trackIdx = (trackIdx + d + n) % n; settings.set('track', trackIdx); if (sched) { stopMusic(); startMusic(); } };
+export const currentTrack = () => (fileMode() ? (pl?.nowPlaying !== undefined ? fileList()[pl.nowPlaying].name : 'Shuffled playlist') : trackNames()[trackIdx % trackNames().length]);
 export const audioRunning = () => !!ctx && ctx.state === 'running';
 export const usingFiles = () => Object.keys(files).length > 0 || AUDIO_FILES.music.length > 0;
 export function audioDebug() {   // test hook: ?debug exposes window.audio
   const d = new Float32Array(analyser ? analyser.fftSize : 1); analyser?.getFloatTimeDomainData(d);
-  return { state: ctx?.state, layers: Object.keys(layers), musicScheduler: !!sched, birdTimer: !!birdTimer, rms: Math.sqrt(d.reduce((a, v) => a + v * v, 0) / d.length), master: master?.gain.value };
+  return { nowPlaying: pl?.nowPlaying, history: pl?.history, state: ctx?.state, layers: Object.keys(layers), musicScheduler: !!sched, birdTimer: !!birdTimer, rms: Math.sqrt(d.reduce((a, v) => a + v * v, 0) / d.length), master: master?.gain.value };
 }
