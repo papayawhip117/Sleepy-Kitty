@@ -6,7 +6,13 @@ import { settings } from '../state/settings.js';
 
 // Drop real loops here (ogg or mp3 in public/audio) and they replace the generated placeholders with no code changes.
 export const AUDIO_FILES = {
-  music: [],                                   // e.g. [{ name: 'Lo-fi one', url: './audio/lofi-1.ogg' }]
+  music: [                                     // see public/audio/CREDITS.md for creator, source and license of every file
+    { name: 'Lofi', url: './audio/music/sub-clair-lofi.mp3' },
+    { name: 'Lofi Study', url: './audio/music/sub-clair-lofi-study.mp3' },
+    { name: 'Study Beats', url: './audio/music/sub-clair-study-beats.mp3' },
+    { name: 'Chill Instrumental', url: './audio/music/sub-clair-chill-instrumental.mp3' },
+    { name: 'Lofi Polaroids', url: './audio/music/fassounds-lofi-polaroids.mp3' },
+  ],
   rainLight: './audio/rain-light.ogg', rainHeavy: './audio/rain-heavy.ogg',
   wind: './audio/wind.ogg', birds: './audio/birds.ogg', crickets: './audio/crickets.ogg', forest: './audio/forest.ogg',
 };
