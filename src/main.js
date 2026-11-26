@@ -50,6 +50,9 @@ const hourNow = () => hourOverride ?? new Date().getHours() + new Date().getMinu
 let lampEase = null;
 import { settings } from './state/settings.js';
 import { isCozy } from './ui/ui.js';
+import { seasonPlate, SEASONS } from './scene/seasons.js';
+import { drawLeaves, drawFireflies, drawStars, findStars } from './scene/effects.js';
+import { initWindowPanel } from './ui/windowPanel.js';
 let lampOn = settings.get('lamp');   // null = follow the clock, true/false = switched by clicking the desk lamp
 const LAMP_HIT = [44, 136, 92, 172];   // room units around the lamp shade and arm
 // ---- lighting: one neutral room, lit in code ----
@@ -81,7 +84,14 @@ const WEATHER = { clear: { dim: 0, room: [255, 255, 255], beam: 1 }, overcast: {
   rain: { dim: 0.5, room: [205, 215, 232], beam: 0.05 }, snow: { dim: 0.28, room: [238, 243, 252], beam: 0.2 } };
 const WEATHER_ORDER = ['clear', 'overcast', 'rain', 'snow'];
 let weather = params.get('weather') in WEATHER ? params.get('weather') : 'clear';
+let season = 'summer';
 const wlevel = Object.fromEntries(WEATHER_ORDER.map((k) => [k, k === weather ? 1 : 0]));   // eased 0..1 per weather
+const TIME_HOURS = { morning: 7.5, afternoon: 14, dusk: 18.5, night: 22 };
+function applyEnv() {                                        // the window panel only edits settings; this reads them. URL params win for testing.
+  if (!params.has('hour')) hourOverride = TIME_HOURS[settings.get('time')] ?? null;
+  if (!params.has('weather') && settings.get('weather') in WEATHER) weather = settings.get('weather');
+  season = SEASONS.includes(params.get('season')) ? params.get('season') : SEASONS.includes(settings.get('season')) ? settings.get('season') : 'summer';
+}
 function stepWeather(dt) { for (const k of WEATHER_ORDER) wlevel[k] += Math.sign((k === weather ? 1 : 0) - wlevel[k]) * Math.min(Math.abs((k === weather ? 1 : 0) - wlevel[k]), dt / 1.5); }
 const wmix = (f) => WEATHER_ORDER.reduce((acc, k) => acc + f(WEATHER[k]) * wlevel[k], 0);
 const wmixRoom = () => [0, 1, 2].map((i) => Math.round(WEATHER_ORDER.reduce((a, k) => a + WEATHER[k].room[i] * wlevel[k], 0)));
@@ -150,13 +160,16 @@ function drawPlate(img, alpha) {
   b.drawImage(img, 0, 0, 1, sh, wx0 - 2, wy0, 2, gh); b.drawImage(img, sw - 1, 0, 1, sh, wx1, wy0, 2, gh);
   b.restore();
 }
+const seasonLevel = Object.fromEntries(SEASONS.map((k) => [k, k === 'summer' ? 1 : 0]));   // eased 0..1, so a season change crossfades
+function stepSeason(dt) { for (const k of SEASONS) { const tgt = k === season ? 1 : 0; seasonLevel[k] += Math.sign(tgt - seasonLevel[k]) * Math.min(Math.abs(tgt - seasonLevel[k]), dt / 1.2); } }
+const PLATES = [['day', scenery], ['dusk', sceneryDusk], ['night', sceneryNight]];
 function drawSky() {
   skyW = plateWeights(hourNow());
   let acc = 0;
-  [[scenery, skyW[0]], [sceneryDusk, skyW[1]], [sceneryNight, skyW[2]]].forEach(([img, w], i) => {
-    if (w <= 0.001) return;
-    acc += w; drawPlate(img, i === 0 || acc - w <= 0.001 ? 1 : w / acc);
-  });
+  PLATES.forEach(([key, img], pi) => SEASONS.forEach((se) => {
+    const w = skyW[pi] * seasonLevel[se]; if (w <= 0.001) return;
+    acc += w; drawPlate(seasonPlate(img, key, se), acc - w <= 0.001 ? 1 : w / acc);
+  }));
   const h = hourNow(), [top, bot] = skyAt(h), a = skyTintAlpha(h) * 0.12, dim = wmix((w) => w.dim);
   b.save(); b.beginPath(); b.rect(wx0, wy0, wx1 - wx0, wy1 - wy0); b.clip();
   if (a > 0) {
@@ -177,9 +190,14 @@ function tintSky() {
   b.fillRect(wx0 - 2, wy0 - 2, wx1 - wx0 + 4, wy1 - wy0 + 4);
   b.restore();
 }
+const STARS = findStars(sceneryNight, [wx0, wy0, wx1, wy1]);
 function drawPrecip(t) {
   const gw = wx1 - wx0, gh = wy1 - wy0;
   b.save(); b.beginPath(); b.rect(wx0, wy0, gw, gh); b.clip();
+  const clearSky = 1 - Math.min(1, wlevel.rain + wlevel.snow + wlevel.overcast * 0.6);
+  drawStars(b, K, STARS, t, skyW[2] * clearSky * (1 - seasonLevel.winter * 0.3));
+  drawFireflies(b, K, [wx0, wy0, wx1, wy1], t, skyW[2] * (1 - Math.min(1, wlevel.rain * 1.2 + wlevel.snow)) * (1 - seasonLevel.winter));
+  drawLeaves(b, K, [wx0, wy0, wx1, wy1], t, seasonLevel.autumn * (1 - 0.7 * wlevel.rain) * (1 - wlevel.snow));
   if (wlevel.rain > 0.01) {
     b.fillStyle = `rgba(215,230,250,${0.9 * wlevel.rain})`;
     for (let i = 0; i < 170; i++) {
@@ -261,7 +279,7 @@ function frame(ms) {
   const t = ms / 1000;
   b.setTransform(K, 0, 0, K, 0, 0); b.imageSmoothingEnabled = false;   // draw in 480x270 room units
   b.clearRect(0, 0, W, H);
-  const dt = Math.min(0.1, t - (frame.last ?? t)); frame.last = t; stepWeather(dt);
+  const dt = Math.min(0.1, t - (frame.last ?? t)); frame.last = t; stepWeather(dt); stepSeason(dt);
   const L = lightAt(hourNow()), night = L.lamp;       // night (0..1) drives the kitty's habits; the lamp switch only changes the glow
   if (lampOn !== null) L.lamp = lampOn ? 1 : 0;
   lampEase = lampEase ?? L.lamp; lampEase += (L.lamp - lampEase) * Math.min(1, dt * 7); L.lamp = lampEase;   // the lamp fades up and down instead of snapping
@@ -287,13 +305,14 @@ function frame(ms) {
 }
 requestAnimationFrame(frame);
 
-// Click the window to change the weather.
+// Click the window to open the environment panel (season, weather, time of day).
+const windowPanel = initWindowPanel();
 canvas.addEventListener('click', (ev) => {
   if (suppressClick) { suppressClick = false; return; }
   { const [lx, ly] = toRoom(ev); if (lx >= LAMP_HIT[0] && lx <= LAMP_HIT[2] && ly >= LAMP_HIT[1] && ly <= LAMP_HIT[3]) { lampOn = !(lampOn ?? lightAt(hourNow()).lamp > 0.5); settings.set('lamp', lampOn); return; } }
   const r = canvas.getBoundingClientRect(), dpr = canvas.width / r.width;
   const x = ((ev.clientX - r.left) * dpr - view.ox) / view.s, y = ((ev.clientY - r.top) * dpr - view.oy) / view.s;
-  if (!isCozy() && x >= wx0 - 8 && x <= wx1 + 8 && y >= wy0 - 8 && y <= wy1 + 8) weather = WEATHER_ORDER[(WEATHER_ORDER.indexOf(weather) + 1) % WEATHER_ORDER.length];
+  if (!isCozy() && x >= wx0 - 8 && x <= wx1 + 8 && y >= wy0 - 8 && y <= wy1 + 8) windowPanel.toggle();
 });
 
 // Kitty pointer controls: tap her for a happy reaction, press and drag to pick her up, release to drop her
@@ -307,9 +326,6 @@ if (params.has('debug')) window.kitty = kitty;   // test hook: ?debug
 
 // Start page and settings (src/start.js). Time and weather choices are remembered in this browser.
 import { initStart } from './start.js';
-initStart({
-  setTime: (h) => { hourOverride = h; },
-  setWeather: (w) => { if (w in WEATHER) weather = w; },
-  hasUrlOverrides: params.has('hour') || params.has('weather'),
-  skip: params.has('nostart'),
-});
+applyEnv(); season = SEASONS.includes(season) ? season : 'summer'; for (const k of SEASONS) seasonLevel[k] = k === season ? 1 : 0;
+settings.onChange((k) => { if (['time', 'weather', 'season'].includes(k)) applyEnv(); });
+initStart({ skip: params.has('nostart') });

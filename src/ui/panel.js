@@ -3,9 +3,9 @@
 const open = new Set();
 let root;
 const rootEl = () => root || (root = document.getElementById('ui-root'));
-export function createPanel({ id, title, subtitle = '', render, onClose, modal = true }) {
+export function createPanel({ id, title, subtitle = '', render, onClose, modal = true, anchor = 'center' }) {
   const el = document.createElement('div');
-  el.className = 'kpanel' + (modal ? ' modal' : ''); el.id = 'panel-' + id; el.hidden = true;
+  el.className = 'kpanel' + (modal ? ' modal' : '') + (anchor === 'corner' ? ' corner' : ''); el.id = 'panel-' + id; el.hidden = true;
   el.innerHTML = `<div class="card" role="dialog" aria-label="${title}"><h1>${title}</h1>${subtitle ? `<p class="sub">${subtitle}</p>` : ''}<div class="body"></div></div>`;
   el.addEventListener('pointerdown', (e) => { if (e.target === el) api.close(); });   // click outside the card closes it
   rootEl().appendChild(el);
