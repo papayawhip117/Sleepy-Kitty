@@ -15,3 +15,12 @@ Checked on 2026-11-26. Labels were read from each track page: none is labelled "
 | music/fassounds-lofi-polaroids.mp3 | Lofi Polaroids - Lofi Music | FASSounds | 2:08 | https://pixabay.com/music/beats-lofi-polaroids-lofi-music-632981/ |
 
 Files are the original 256 kbps MP3s downloaded by the project owner. About 26 MB in total.
+
+## Ambient sounds
+
+Same license and checks as above (Pixabay Content License, no AI generated label, no Content ID Registered label, creator is not a Freesound re-upload), checked 2026-11-26. Original MP3s, unaltered. Sounds not listed here (birds, wind, heavier rain) are still generated in code as placeholders.
+
+| File | Title | Creator | Length | Source page |
+|---|---|---|---|---|
+| rain/eryliaa-gentle-rain-on-window.mp3 | Gentle Rain on Window | Eryliaa | 2:27 | https://pixabay.com/sound-effects/nature-gentle-rain-on-window-350529/ |
+| nature/simous00-crickets-cicadas-1.mp3 | Crickets Cicadas 1 | simous00 | 4:50 | https://pixabay.com/sound-effects/film-special-effects-crickets-cicadas-1-529728/ |

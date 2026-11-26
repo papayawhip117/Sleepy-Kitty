@@ -13,8 +13,8 @@ export const AUDIO_FILES = {
     { name: 'Chill Instrumental', url: './audio/music/sub-clair-chill-instrumental.mp3' },
     { name: 'Lofi Polaroids', url: './audio/music/fassounds-lofi-polaroids.mp3' },
   ],
-  rainLight: './audio/rain-light.ogg', rainHeavy: './audio/rain-heavy.ogg',
-  wind: './audio/wind.ogg', birds: './audio/birds.ogg', crickets: './audio/crickets.ogg', forest: './audio/forest.ogg',
+  rainLight: './audio/rain/eryliaa-gentle-rain-on-window.mp3', rainHeavy: './audio/rain-heavy.mp3',
+  wind: './audio/wind.mp3', birds: './audio/birds.mp3', crickets: './audio/nature/simous00-crickets-cicadas-1.mp3', forest: './audio/forest.mp3',
 };
 const TRACKS = [   // placeholder lo-fi loops, generated: chords as MIDI notes
   { name: 'Rainy window', bpm: 62, chords: [[53, 57, 60, 64], [52, 55, 59, 62], [50, 53, 57, 60], [48, 52, 55, 59]] },
@@ -53,11 +53,12 @@ function noiseSource(filters) {                 // placeholder: filtered noise l
   let node = src; filters.forEach(([type, f, q]) => { const fl = ctx.createBiquadFilter(); fl.type = type; fl.frequency.value = f; if (q) fl.Q.value = q; node.connect(fl); node = fl; });
   return { src, out: node };
 }
+const FILE_TRIM = { rainLight: 8, crickets: 2 };   // levels the quiet source files (rain mean -48 dB, crickets -31 dB) up to a normal mix
 function layer(name, build) {                   // builds a layer once, returns its gain node; real files take over if present
   if (layers[name]) return layers[name];
   const gain = ctx.createGain(); gain.gain.value = 0;
   let stop = () => {};
-  if (files[name]) { const s = ctx.createBufferSource(); s.buffer = files[name]; s.loop = true; s.connect(gain); s.start(); stop = () => s.stop(); } else stop = build(gain) || stop;
+  if (files[name]) { const s = ctx.createBufferSource(), trim = ctx.createGain(); trim.gain.value = FILE_TRIM[name] || 1; s.buffer = files[name]; s.loop = true; s.connect(trim); trim.connect(gain); s.start(); stop = () => s.stop(); } else stop = build(gain) || stop;
   return (layers[name] = { gain, stop });
 }
 function rebuild(name) { if (layers[name]) { layers[name].stop(); layers[name].gain.disconnect(); delete layers[name]; applyAll(); } }
@@ -183,7 +184,12 @@ function applyAll() {
   const musicOn = settings.get('musicOn'), rainOn = settings.get('rainOn'), natureOn = settings.get('natureOn');
   ramp(bus.music, musicOn ? settings.get('musicVol') : 0, 0.8); ramp(bus.rain, rainOn ? settings.get('rainVol') : 0, 0.8); ramp(bus.nature, natureOn ? settings.get('natureVol') : 0, 0.8);
   if (musicOn) { AUDIO_FILES.music.length ? startFileMusic() : startMusic(); ramp((musicLayer || { gain: bus.music }).gain, 1, 0.4); } else { stopMusic(); stopFileMusic(); }
-  if (rainOn) { const heavy = settings.get('rainHeavy'), l = buildRain(false), h = buildRain(true); if (!l.joined) { l.gain.connect(bus.rain); h.gain.connect(bus.rain); l.joined = h.joined = true; } ramp(l.gain, heavy ? 0 : 1, 1.2); ramp(h.gain, heavy ? 1 : 0, 1.2); }
+  if (rainOn) {
+    const heavy = settings.get('rainHeavy'), l = buildRain(false);
+    if (!l.joined) { l.gain.connect(bus.rain); l.joined = true; }
+    if (files.rainLight && !files.rainHeavy) { ramp(l.gain, heavy ? 1 : 0.55, 1.2); if (layers.rainHeavy) ramp(layers.rainHeavy.gain, 0, 1); }   // no heavy-rain file yet: "heavier" is the real rain, louder
+    else { const h = buildRain(true); if (!h.joined) { h.gain.connect(bus.rain); h.joined = true; } ramp(l.gain, heavy ? 0 : 1, 1.2); ramp(h.gain, heavy ? 1 : 0, 1.2); }
+  } else for (const k of ['rainLight', 'rainHeavy']) if (layers[k]) ramp(layers[k].gain, 0, 1);
   if (natureOn) {
     const e = getEnv(), night = e.hour >= 19.5 || e.hour < 5.5;
     const w = buildWind(), c = buildCrickets(), b = buildBirds(); [w, c, b].forEach((l) => { if (!l.joined) { l.gain.connect(bus.nature); l.joined = true; } });
