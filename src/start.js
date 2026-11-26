@@ -1,6 +1,7 @@
 // Title screen, plus the "how to play" panel (built on the shared panel system in ui/panel.js).
 import { createPanel } from './ui/panel.js';
 import { initControls } from './ui/ui.js';
+import { initAudioPanel } from './ui/audioPanel.js';
 
 export function initStart(api) {
   const root = document.getElementById('start');
@@ -13,7 +14,8 @@ export function initStart(api) {
       body.querySelector('#back').addEventListener('click', p.close);
     },
   });
-  initControls({ onSettings: () => panel.toggle() });
+  const audioPanel = initAudioPanel();
+  initControls({ onSettings: () => panel.toggle(), onAudio: () => audioPanel.toggle() });
 
   function showTitle() {                           // title screen: cream page, logo, start button (Cody's art)
     root.className = 'title';

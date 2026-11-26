@@ -9,16 +9,19 @@ const icon = (rows, cls = '') => {
   return `<svg class="px ${cls}" viewBox="0 0 ${rows[0].length} ${rows.length}" shape-rendering="crispEdges" aria-hidden="true" fill="currentColor">${rects}</svg>`;
 };
 const EYE = ['...#####...', '..#.....#..', '.#..###..#.', '#..#####..#', '.#..###..#.', '..#.....#..', '...#####...'];
+const SPEAKER = ['....#......', '...##..#...', '###.#...#..', '###.#.#..#.', '###.#.#..#.', '###.#.#..#.', '###.#...#..', '...##..#...', '....#......'];
 const EYE_CLOSED = ['...........', '...........', '#.........#', '.#########.', '..#.#.#.#..', '...........', '...........'];
 
-export function initControls({ onSettings }) {
+export function initControls({ onSettings, onAudio }) {
   const cluster = document.getElementById('controls');
   cluster.innerHTML = `
     <button type="button" id="gear" aria-label="Settings" title="Settings">&#9881;</button>
+    <button type="button" id="audio-btn" aria-label="Sounds" title="Sounds">${icon(SPEAKER)}</button>
     <button type="button" id="cozy-on" aria-label="Cozy mode: hide the interface" title="Cozy mode (H)">${icon(EYE_CLOSED)}</button>`;
   const restore = document.getElementById('cozy-off');
   restore.innerHTML = icon(EYE); restore.setAttribute('aria-label', 'Show the interface'); restore.title = 'Show the interface (H)';
   cluster.querySelector('#gear').addEventListener('click', onSettings);
+  cluster.querySelector('#audio-btn').addEventListener('click', onAudio);
   cluster.querySelector('#cozy-on').addEventListener('click', () => setCozy(true));
   restore.addEventListener('click', () => setCozy(false));
 

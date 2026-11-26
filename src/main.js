@@ -53,6 +53,7 @@ import { isCozy } from './ui/ui.js';
 import { seasonPlate, SEASONS } from './scene/seasons.js';
 import { drawLeaves, drawFireflies, drawStars, findStars } from './scene/effects.js';
 import { initWindowPanel } from './ui/windowPanel.js';
+import { initAudio, audioDebug } from './audio/audio.js';
 let lampOn = settings.get('lamp');   // null = follow the clock, true/false = switched by clicking the desk lamp
 const LAMP_HIT = [44, 136, 92, 172];   // room units around the lamp shade and arm
 // ---- lighting: one neutral room, lit in code ----
@@ -322,10 +323,11 @@ let suppressClick = false;
 canvas.addEventListener('pointerdown', (ev) => { const [x, y] = toRoom(ev); if (kitty.hit(x, y)) { kitty.down(x, y); suppressClick = true; canvas.setPointerCapture(ev.pointerId); canvas.style.cursor = 'grabbing'; } });
 canvas.addEventListener('pointermove', (ev) => { const [x, y] = toRoom(ev); kitty.move(x, y); if (kitty.k.state !== 'held') canvas.style.cursor = kitty.hit(x, y) ? 'grab' : 'default'; });
 canvas.addEventListener('pointerup', () => { if (kitty.k.state === 'held') { kitty.up(lightAt(hourNow()).lamp); canvas.style.cursor = 'grab'; } });
-if (params.has('debug')) window.kitty = kitty;   // test hook: ?debug
+if (params.has('debug')) { window.kitty = kitty; window.audio = audioDebug; }   // test hook: ?debug
 
 // Start page and settings (src/start.js). Time and weather choices are remembered in this browser.
 import { initStart } from './start.js';
 applyEnv(); season = SEASONS.includes(season) ? season : 'summer'; for (const k of SEASONS) seasonLevel[k] = k === season ? 1 : 0;
 settings.onChange((k) => { if (['time', 'weather', 'season'].includes(k)) applyEnv(); });
+initAudio(() => ({ hour: hourNow(), rain: weather === 'rain' }));
 initStart({ skip: params.has('nostart') });
