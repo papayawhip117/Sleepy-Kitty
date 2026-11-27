@@ -15,7 +15,7 @@ export function initStart(api) {
     },
   });
   const audioPanel = initAudioPanel();
-  initControls({ onSettings: () => panel.toggle(), onAudio: () => audioPanel.toggle() });
+  initControls({ onSettings: () => panel.toggle(), onAudio: () => audioPanel.toggle(), onColors: api.onColors });
 
   function showTitle() {                           // title screen: cream page, logo, start button (Cody's art)
     root.className = 'title';
