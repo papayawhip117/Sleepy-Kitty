@@ -336,7 +336,7 @@ let suppressClick = false;
 canvas.addEventListener('pointerdown', (ev) => { const [x, y] = toRoom(ev); if (kitty.hit(x, y)) { kitty.down(x, y); suppressClick = true; canvas.setPointerCapture(ev.pointerId); canvas.style.cursor = 'grabbing'; } });
 canvas.addEventListener('pointermove', (ev) => { const [x, y] = toRoom(ev); kitty.move(x, y); if (kitty.k.state !== 'held') canvas.style.cursor = kitty.hit(x, y) ? 'grab' : 'default'; });
 canvas.addEventListener('pointerup', () => { if (kitty.k.state === 'held') { kitty.up(lightAt(hourNow()).lamp); canvas.style.cursor = 'grab'; } });
-if (params.has('debug')) { window.kitty = kitty; window.audio = audioDebug; window.AUDIO_FILES = AUDIO_FILES; }   // test hook: ?debug
+if (params.has('debug')) { window.kitty = kitty; window.studio = studioPanel; window.audio = audioDebug; window.AUDIO_FILES = AUDIO_FILES; }   // test hook: ?debug
 
 // Start page and settings (src/start.js). Time and weather choices are remembered in this browser.
 import { initStart } from './start.js';
