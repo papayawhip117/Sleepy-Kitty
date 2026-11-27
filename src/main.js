@@ -1,5 +1,7 @@
 import { createKitty } from './kitty.js';
 import { initStudioPanel } from './ui/studioPanel.js';
+import { initColorsPanel } from './ui/colorsPanel.js';
+import { coloured } from './scene/roomColors.js';
 // Sleepy Kitty. The room is authored at 480x270 and drawn from separate layers, back to front.
 // Viewport: the room is scaled uniformly (never stretched) until it covers the whole window, so there is
 // no letterboxing. On a window that is not 16:9, the outer edge of the room is cropped, so the ceiling edge and
@@ -269,12 +271,13 @@ function curtainFrame(t, rate, phase) {
   const p = 0.5 + 0.5 * Math.sin(t * rate + phase) * gust;
   return Math.max(0, Math.min(7, Math.round(p * 7)));
 }
+let curtainSheet = curtainImg;   // the curtain sheet in the chosen colour (see scene/roomColors.js)
 function drawCurtains(t) {
   const [cw, ch] = curtainMeta.cell, fl = curtainFrame(t, 0.42, 0), fr = curtainFrame(t, 0.33, 2.1);
   b.drawImage(rodImg, CURT.rodX, CURT.y + curtainMeta.rod_y, rodImg.width, rodImg.height);                          // rod: the 220px strip twice, overlapped, to span the frame
   b.drawImage(rodImg, CURT.rodX + CURT.rodW - rodImg.width, CURT.y + curtainMeta.rod_y, rodImg.width, rodImg.height);
-  b.drawImage(curtainImg, fl * cw, 0, cw, ch, CURT.x0 - curtainMeta.header_x, CURT.y, cw, ch);
-  b.drawImage(curtainImg, fr * cw, ch, cw, ch, CURT.xr, CURT.y, cw, ch);
+  b.drawImage(curtainSheet, fl * cw, 0, cw, ch, CURT.x0 - curtainMeta.header_x, CURT.y, cw, ch);
+  b.drawImage(curtainSheet, fr * cw, ch, cw, ch, CURT.xr, CURT.y, cw, ch);
 }
 
 function frame(ms) {
@@ -316,6 +319,15 @@ for (const [id, name] of [['ginger', 'Ginger'], ['black', 'Midnight'], ['calico'
 const applyCoat = () => { const c = COATS.find((o) => o.id === settings.get('coat')) || COATS[0]; kitty.setSheet(c.img, c.meta); };
 applyCoat(); settings.onChange((k) => { if (k === 'coat') applyCoat(); });
 const studioPanel = initStudioPanel(COATS);
+// Room colours: bedding, rug and curtains are recoloured from the existing art in code (hue only, shading kept).
+const colorsPanel = initColorsPanel();
+function applyColors() {
+  LAYOUT.bed.img = coloured(bedImg, 'bed', settings.get('bedColor'));
+  LAYOUT.rug.img = coloured(rugImg, 'rug', settings.get('rugColor'));
+  curtainSheet = coloured(curtainImg, 'curtains', settings.get('curtainColor'));
+}
+applyColors(); settings.onChange((k) => { if (['bedColor', 'rugColor', 'curtainColor'].includes(k)) applyColors(); });
+const BED_HIT = [310, 140, 470, 256];   // room units: the bed (clicking it opens the colours panel)
 const LAPTOP_HIT = [94, 154, 137, 190];   // room units around the laptop on the desk
 
 // Click the window to open the environment panel (season, weather, time of day).
@@ -324,6 +336,7 @@ canvas.addEventListener('click', (ev) => {
   if (suppressClick) { suppressClick = false; return; }
   { const [lx, ly] = toRoom(ev); if (lx >= LAMP_HIT[0] && lx <= LAMP_HIT[2] && ly >= LAMP_HIT[1] && ly <= LAMP_HIT[3]) { lampOn = !(lampOn ?? lightAt(hourNow()).lamp > 0.5); settings.set('lamp', lampOn); return; } }
   { const [lx, ly] = toRoom(ev); if (!isCozy() && lx >= LAPTOP_HIT[0] && lx <= LAPTOP_HIT[2] && ly >= LAPTOP_HIT[1] && ly <= LAPTOP_HIT[3]) { studioPanel.toggle(); return; } }
+  { const [lx, ly] = toRoom(ev); if (!isCozy() && lx >= BED_HIT[0] && lx <= BED_HIT[2] && ly >= BED_HIT[1] && ly <= BED_HIT[3]) { colorsPanel.toggle(); return; } }
   const r = canvas.getBoundingClientRect(), dpr = canvas.width / r.width;
   const x = ((ev.clientX - r.left) * dpr - view.ox) / view.s, y = ((ev.clientY - r.top) * dpr - view.oy) / view.s;
   if (!isCozy() && x >= wx0 - 8 && x <= wx1 + 8 && y >= wy0 - 8 && y <= wy1 + 8) windowPanel.toggle();
@@ -336,11 +349,11 @@ let suppressClick = false;
 canvas.addEventListener('pointerdown', (ev) => { const [x, y] = toRoom(ev); if (kitty.hit(x, y)) { kitty.down(x, y); suppressClick = true; canvas.setPointerCapture(ev.pointerId); canvas.style.cursor = 'grabbing'; } });
 canvas.addEventListener('pointermove', (ev) => { const [x, y] = toRoom(ev); kitty.move(x, y); if (kitty.k.state !== 'held') canvas.style.cursor = kitty.hit(x, y) ? 'grab' : 'default'; });
 canvas.addEventListener('pointerup', () => { if (kitty.k.state === 'held') { kitty.up(lightAt(hourNow()).lamp); canvas.style.cursor = 'grab'; } });
-if (params.has('debug')) { window.kitty = kitty; window.studio = studioPanel; window.audio = audioDebug; window.AUDIO_FILES = AUDIO_FILES; }   // test hook: ?debug
+if (params.has('debug')) { window.kitty = kitty; window.studio = studioPanel; window.colors = colorsPanel; window.audio = audioDebug; window.AUDIO_FILES = AUDIO_FILES; }   // test hook: ?debug
 
 // Start page and settings (src/start.js). Time and weather choices are remembered in this browser.
 import { initStart } from './start.js';
 applyEnv(); season = SEASONS.includes(season) ? season : 'summer'; for (const k of SEASONS) seasonLevel[k] = k === season ? 1 : 0;
 settings.onChange((k) => { if (['time', 'weather', 'season'].includes(k)) applyEnv(); });
 initAudio(() => ({ hour: hourNow(), rain: weather === 'rain' }));
-initStart({ skip: params.has('nostart') });
+initStart({ skip: params.has('nostart'), onColors: () => colorsPanel.toggle() });

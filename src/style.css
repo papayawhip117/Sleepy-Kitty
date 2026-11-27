@@ -77,3 +77,16 @@ body.cozy #controls, body.cozy #ui-root, body.cozy #start.panel { display: none;
 .kpanel .coats .coat { min-width: 0; padding: 8px 6px 6px; }
 .kpanel .coats .coat canvas { width: auto; height: auto; }
 .kpanel .coats .coat .cap { font-size: 7px; }
+/* Room colours: colour chips as pixel-framed squares */
+#panel-colors.corner .card { width: min(96vw, 560px); }
+.kpanel .swatch { min-width: 0; padding: 7px 6px 6px; min-width: 62px; }
+.kpanel .swatch .dot { display: block; width: 34px; height: 34px; border: 3px solid var(--ink); box-sizing: border-box; }
+@media (max-width: 700px) {   /* phones: keep the colours panel short so the room stays visible above it */
+  #panel-colors .card { padding: 12px 8px 10px; }
+  #panel-colors h1 { margin-bottom: 4px; }
+  .kpanel .swatch { min-width: 44px; padding: 4px 2px 3px; }
+  .kpanel .swatch .dot { width: 24px; height: 24px; border-width: 2px; }
+  .kpanel .swatch .cap { display: none; }
+  #panel-colors .row { margin: 0 0 4px; }
+  #panel-colors .icons { gap: 4px; flex-wrap: nowrap; }
+}
