@@ -22,11 +22,20 @@ const isWood = (h, s, l) => (h >= 5 && h <= 34 && s > 0.45 && l < 0.66) || (h >=
 const isVine = (h, s, l) => h >= 36 && h <= 170 && s > 0.1 && l > 0.06 && l < 0.85;   // the plant on the headboard, including its dark olive outline
 const SKIP = { bed: (h, s, l) => isVine(h, s, l) || isWood(h, s, l), rug: isFoliage, curtains: () => false };
 
-// the choices per target: { id, name, sw (swatch colour), dh (hue shift) } for bed and rug, { hue, sat } for the curtains
+// The choices per target. Every choice recolours with { hue, sat, lm, lo }: the pixel keeps its own light and dark (so folds, highlights and
+// outlines survive), takes the new hue, and gets saturation `sat` scaled by how coloured the pixel was, and lightness `lo + lm * lightness`.
+// The original sprite is the first choice. (swatch colours `sw` are for the panel buttons.)
+const choices = (orig, t) => [orig, ...[['brown', 'Brown', '#9a6e50'], ['gray', 'Gray', '#6c6672'], ['purple', 'Purple', '#b08cd8'], ['blue', 'Light blue', '#a8d0f0'], ['pink', 'Pink', '#f0a0bc']].map(([id, name, sw]) => ({ id, name, sw, ...t[id] }))];
 export const COLOR_OPTIONS = {
-  bed: [{ id: 'original', name: 'Blush', sw: '#f0b4c4' }, { id: 'sage', name: 'Sage', sw: '#a8c8a0', dh: 110 }, { id: 'sky', name: 'Sky', sw: '#a0c4e8', dh: -160 }, { id: 'lilac', name: 'Lilac', sw: '#c4a8e0', dh: -75 }, { id: 'butter', name: 'Butter', sw: '#f0d890', dh: 25 }, { id: 'coral', name: 'Coral', sw: '#f4a890', dh: 12 }],
-  rug: [{ id: 'original', name: 'Cream', sw: '#f6e2c0' }, { id: 'sage', name: 'Sage', sw: '#a8c8a0', dh: 150 }, { id: 'sky', name: 'Sky', sw: '#a0c4e8', dh: -130 }, { id: 'lilac', name: 'Lilac', sw: '#c4a8e0', dh: -70 }, { id: 'butter', name: 'Butter', sw: '#f0d890', dh: 55 }, { id: 'coral', name: 'Coral', sw: '#f4a890', dh: 30 }],
-  curtains: [{ id: 'original', name: 'White', sw: '#fbeee6' }, { id: 'rose', name: 'Rose', sw: '#f4b8c8', hue: 345, sat: 0.55 }, { id: 'sage', name: 'Sage', sw: '#b8d8b0', hue: 120, sat: 0.4 }, { id: 'sky', name: 'Sky', sw: '#b0d0f0', hue: 208, sat: 0.6 }, { id: 'lilac', name: 'Lilac', sw: '#d0b8f0', hue: 270, sat: 0.5 }, { id: 'butter', name: 'Butter', sw: '#f4e0a0', hue: 45, sat: 0.7 }],
+  bed: choices({ id: 'original', name: 'Blush', sw: '#f0b4c4' }, {
+    brown: { hue: 27, sat: 0.34, lm: 0.62, lo: 0.2 }, gray: { hue: 268, sat: 0.07, lm: 0.55, lo: 0.1 }, purple: { hue: 272, sat: 0.42, lm: 0.92, lo: 0.04 },
+    blue: { hue: 205, sat: 0.62, lm: 0.95, lo: 0.04 }, pink: { hue: 343, sat: 0.62, lm: 0.95, lo: 0.03 } }),
+  rug: choices({ id: 'original', name: 'Cream', sw: '#f6e2c0' }, {
+    brown: { hue: 28, sat: 0.32, lm: 0.62, lo: 0.2 }, gray: { hue: 268, sat: 0.07, lm: 0.55, lo: 0.12 }, purple: { hue: 272, sat: 0.42, lm: 0.92, lo: 0.04 },
+    blue: { hue: 205, sat: 0.62, lm: 0.95, lo: 0.04 }, pink: { hue: 343, sat: 0.62, lm: 0.95, lo: 0.03 } }),
+  curtains: choices({ id: 'original', name: 'White', sw: '#fbeee6' }, {
+    brown: { hue: 28, sat: 0.3, lm: 0.55, lo: 0.3 }, gray: { hue: 268, sat: 0.06, lm: 0.52, lo: 0.3 }, purple: { hue: 272, sat: 0.4, lm: 0.85, lo: 0.1 },
+    blue: { hue: 205, sat: 0.55, lm: 0.9, lo: 0.08 }, pink: { hue: 343, sat: 0.55, lm: 0.9, lo: 0.08 } }),
 };
 
 function recolour(img, target, opt) {
@@ -37,8 +46,7 @@ function recolour(img, target, opt) {
     if (d[i * 4 + 3] === 0) continue;
     const [H, S, L] = rgb2hsl(d[i * 4], d[i * 4 + 1], d[i * 4 + 2]);
     if (skip(H, S, L)) continue;
-    const [r, g, b] = opt.hue !== undefined ? hsl2rgb(opt.hue, Math.max(S * 1.1, opt.sat * Math.min(1, (1 - Math.abs(2 * L - 1)) * 2.2)), L)   // curtains: tint the pale cloth, folds stay
-      : hsl2rgb(H + opt.dh, S, L);                                                                                                  // bed and rug: turn the hue
+    const [r, g, b] = hsl2rgb(opt.hue, opt.sat * Math.min(1, 0.45 + S), Math.max(0, Math.min(0.97, opt.lo + opt.lm * L)));
     d[i * 4] = r; d[i * 4 + 1] = g; d[i * 4 + 2] = b;
   }
   c.putImageData(id, 0, 0);
