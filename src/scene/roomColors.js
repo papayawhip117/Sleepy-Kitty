@@ -25,16 +25,16 @@ const SKIP = { bed: (h, s, l) => isVine(h, s, l) || isWood(h, s, l), rug: isFoli
 // The choices per target. Every choice recolours with { hue, sat, lm, lo }: the pixel keeps its own light and dark (so folds, highlights and
 // outlines survive), takes the new hue, and gets saturation `sat` scaled by how coloured the pixel was, and lightness `lo + lm * lightness`.
 // The original sprite is the first choice. (swatch colours `sw` are for the panel buttons.)
-const choices = (orig, t) => [orig, ...[['red', 'Red', '#c8444e'], ['gray', 'Gray', '#7a6c68'], ['purple', 'Purple', '#9a5a9c'], ['blue', 'Light blue', '#8cb4e8'], ['pink', 'Pink', '#e0708c']].map(([id, name, sw]) => ({ id, name, sw, ...t[id] }))];
+const choices = (orig, t) => [orig, ...[['red', 'Red', '#c8444e'], ['gray', 'Gray', '#7a6c68'], ['purple', 'Berry', '#76305a'], ['blue', 'Light blue', '#8cb4e8'], ['pink', 'Pink', '#e0708c']].map(([id, name, sw]) => ({ id, name, sw, ...t[id] }))];
 export const COLOR_OPTIONS = {
   bed: choices({ id: 'original', name: 'Blush', sw: '#f0b4c4' }, {
-    red: { hue: 355, sat: 0.8, lm: 0.7, lo: 0.04 }, gray: { hue: 14, sat: 0.1, lm: 0.55, lo: 0.1 }, purple: { hue: 295, sat: 0.46, lm: 0.76, lo: 0.06 },
+    red: { hue: 355, sat: 0.8, lm: 0.7, lo: 0.04 }, gray: { hue: 14, sat: 0.1, lm: 0.55, lo: 0.1 }, purple: { hue: 332, sat: 0.46, lm: 0.5, lo: 0.0 },
     blue: { hue: 213, sat: 0.62, lm: 0.82, lo: 0.06 }, pink: { hue: 345, sat: 0.66, lm: 0.8, lo: 0.08 } }),
   rug: choices({ id: 'original', name: 'Cream', sw: '#f6e2c0' }, {
-    red: { hue: 355, sat: 0.8, lm: 0.7, lo: 0.04 }, gray: { hue: 14, sat: 0.1, lm: 0.55, lo: 0.12 }, purple: { hue: 295, sat: 0.46, lm: 0.76, lo: 0.06 },
+    red: { hue: 355, sat: 0.8, lm: 0.7, lo: 0.04 }, gray: { hue: 14, sat: 0.1, lm: 0.55, lo: 0.12 }, purple: { hue: 332, sat: 0.46, lm: 0.5, lo: 0.0 },
     blue: { hue: 213, sat: 0.62, lm: 0.82, lo: 0.06 }, pink: { hue: 345, sat: 0.66, lm: 0.8, lo: 0.08 } }),
   curtains: choices({ id: 'original', name: 'White', sw: '#fbeee6' }, {
-    red: { hue: 355, sat: 0.7, lm: 0.72, lo: 0.1 }, gray: { hue: 14, sat: 0.09, lm: 0.52, lo: 0.3 }, purple: { hue: 295, sat: 0.42, lm: 0.76, lo: 0.1 },
+    red: { hue: 355, sat: 0.7, lm: 0.72, lo: 0.1 }, gray: { hue: 14, sat: 0.09, lm: 0.52, lo: 0.3 }, purple: { hue: 332, sat: 0.42, lm: 0.5, lo: 0.03 },
     blue: { hue: 213, sat: 0.55, lm: 0.82, lo: 0.1 }, pink: { hue: 345, sat: 0.6, lm: 0.78, lo: 0.12 } }),
 };
 
